@@ -2,9 +2,9 @@
 `timescale 1ns / 1ps
 
 module uart_tb ();
-  parameter CLOCK_FREQUENCY = 100_000_000;
-  parameter UART_BAUD_RATE = 115200;
-  parameter UART_CLOCKS_PER_BIT = CLOCK_FREQUENCY/UART_BAUD_RATE;
+  localparam CLOCK_FREQUENCY = 100_000_000;
+  localparam UART_BAUD_RATE = 115200;
+  localparam UART_CLOCKS_PER_BIT = CLOCK_FREQUENCY/UART_BAUD_RATE;
 
   reg r_Clock = 0;
   reg r_Rx_Serial = 1;

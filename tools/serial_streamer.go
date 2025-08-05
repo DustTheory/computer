@@ -35,20 +35,26 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
+	var color byte = 1
 	for {
-		dataToSend := make([]byte, bytesToSendPerChunk)
+		// dataToSend := make([]byte, bytesToSendPerChunk)
 
-		for i := 0; i < bytesToSendPerChunk; i++ {
-			dataToSend[i] = byte(rand.Intn(256))
-		}
+		// for i := 0; i < bytesToSendPerChunk; i++ {
+		// 	dataToSend[i] = byte(rand.Intn(256))
+		// }
 
-		n, err := port.Write(dataToSend)
+		n, err := port.Write([]byte{color})
 		if err != nil {
 			log.Printf("Error writing to serial port: %v", err)
 		} else {
-			fmt.Printf("Sent %d random bytes.\n", n)
+			fmt.Printf("Sent %d bytes.\n", n)
 		}
 
-		// time.Sleep(sendIntervalMs * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
+		if color == 3 {
+			color = 0
+		} else {
+			color++
+		}
 	}
 }
