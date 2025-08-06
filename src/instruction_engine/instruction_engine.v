@@ -13,7 +13,7 @@ module instruction_engine
    );
 
   localparam s_IDLE    = 2'd0;
-  localparam s_DECODE  = 2'd1;
+  localparam s_DECODE_AND_EXECUTE  = 2'd1;
   localparam s_EXECUTE = 2'd2;
 
   localparam op_NOP = 3'b000;
@@ -26,7 +26,7 @@ module instruction_engine
   localparam op_RESERVED = 3'b111;
 
   reg [1:0] r_State = s_IDLE;
-  reg [2:0] r_Op_Code = 0;
+  reg [7:0] r_Op_Code = 0;
   reg [31:0] r_Byte_Index = 0;
 
   reg r_Next_State = 0;
@@ -65,7 +65,7 @@ module instruction_engine
           end
           o_Write_Enable <= 1;
           o_Write_Addr <= r_Byte_Index;
-          o_Write_Data <= 3'b010;
+          o_Write_Data <= 0'b010;
         end
         op_BLUE:
         begin
@@ -79,10 +79,18 @@ module instruction_engine
           o_Write_Addr <= r_Byte_Index;
           o_Write_Data <= 3'b001;
         end
-        // op_FRAME:
-        // begin
-        //   r_End_Of_Decode <= 1;
-        // end
+        op_FRAME:
+        begin
+          if(r_Byte_Index == FRAMEBUFFER_DEPTH - 1)
+            r_Next_State <= 1;
+          else
+          begin
+            r_Next_State <= 0;
+          end
+          o_Write_Enable <= 1;
+          o_Write_Addr <= r_Byte_Index;
+          o_Write_Data <= i_Rx_Byte;
+        end
         // op_STORE:
         // begin
         //   r_End_Of_Decode <= 1;
@@ -112,43 +120,30 @@ module instruction_engine
 
   always @(posedge i_Clock)
   begin
-    case(r_State)
-      s_IDLE:
-      begin
-        if(i_Rx_DV)
+    if(i_Rx_DV)
+    begin
+      case(r_State)
+        s_IDLE:
         begin
-          r_Op_Code <= i_Rx_Byte[2:0];
-          r_State <= s_DECODE;
+          r_Op_Code <= i_Rx_Byte;
+          r_State <= s_DECODE_AND_EXECUTE;
           r_Byte_Index <= 0;
         end
-      end
-      s_DECODE:
-      begin
-        if(r_Next_State)
+        s_DECODE_AND_EXECUTE:
         begin
-          r_Byte_Index <= 0;
-          r_State <= s_EXECUTE;
+          if(r_Next_State)
+          begin
+            r_Byte_Index <= 0;
+            r_State <= s_IDLE;
+          end
+          else
+          begin
+            r_Byte_Index <= r_Byte_Index + 1;
+            r_State <= s_DECODE_AND_EXECUTE;
+          end
         end
-        else
-        begin
-          r_Byte_Index <= r_Byte_Index + 1;
-          r_State <= s_DECODE;
-        end
-      end
-      s_EXECUTE:
-      begin
-        if(r_Next_State)
-        begin
-          r_Byte_Index <= 0;
-          r_State <= s_IDLE;
-        end
-        else
-        begin
-          r_Byte_Index <= r_Byte_Index + 1;
-          r_State <= s_EXECUTE;
-        end
-      end
-    endcase
+      endcase
+    end
   end
 
 endmodule

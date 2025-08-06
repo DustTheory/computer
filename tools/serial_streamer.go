@@ -2,18 +2,51 @@ package main
 
 import (
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"log"
-	"math/rand"
-	"time"
+	"os"
 
 	"go.bug.st/serial"
 )
 
+const targetWidth = 640
+const targetHeight = 480
+
+type OpCode byte
+
+const (
+	op_RED   OpCode = 0x01
+	op_GREEN OpCode = 0x02
+	op_BLUE  OpCode = 0x03
+	op_FRAME OpCode = 0x04
+)
+
 func main() {
-	const serialPortName = "/dev/ttyUSB1"
+	f, err := os.Open("./test_images/house_640x480.jpeg")
+	if err != nil {
+		fmt.Println("Failed to open image file:", err)
+		return
+	}
+	defer f.Close()
+
+	img, format, err := image.Decode(f)
+	if err != nil {
+		fmt.Println("Failed to decode image file:", err)
+		return
+	}
+
+	fmt.Printf("Detected image format: %s\n", format)
+
+	currentBounds := img.Bounds()
+	if currentBounds.Dx() != targetWidth || currentBounds.Dy() != targetHeight {
+		fmt.Printf("Warning: Image size %dx%d does not match assumed %dx%d. Proceeding anyway.\n",
+			currentBounds.Dx(), currentBounds.Dy(), targetWidth, targetHeight)
+	}
+
+	const serialPortName = "/dev/ttyUSB0"
 	const baudRate = 115200
-	const bytesToSendPerChunk = 64
-	const sendIntervalMs = 10
 
 	mode := &serial.Mode{
 		BaudRate: baudRate,
@@ -31,30 +64,42 @@ func main() {
 	fmt.Printf("--- Connected to %s at %d baud ---\n", serialPortName, baudRate)
 	fmt.Println("Press Ctrl+C to stop streaming.")
 
-	// time.Sleep(100 * time.Millisecond)
+	var opCode OpCode = op_FRAME
+	var packet []byte
 
-	rand.Seed(time.Now().UnixNano())
+	if opCode == op_FRAME {
+		packet = make([]byte, targetWidth*targetHeight+1)
+		packet[0] = byte(opCode)
 
-	var color byte = 1
-	for {
-		// dataToSend := make([]byte, bytesToSendPerChunk)
+		for y := 0; y < targetHeight; y++ {
+			for x := 0; x < targetWidth; x++ {
+				r, g, b, _ := img.At(x, y).RGBA()
 
-		// for i := 0; i < bytesToSendPerChunk; i++ {
-		// 	dataToSend[i] = byte(rand.Intn(256))
-		// }
+				var r_bit byte = 0
+				if r > 32767 {
+					r_bit = 1
+				}
+				var g_bit byte = 0
+				if g > 32767 {
+					g_bit = 1
+				}
+				var b_bit byte = 0
+				if b > 32767 {
+					b_bit = 1
+				}
 
-		n, err := port.Write([]byte{color})
-		if err != nil {
-			log.Printf("Error writing to serial port: %v", err)
-		} else {
-			fmt.Printf("Sent %d bytes.\n", n)
+				packet[y*targetWidth+x+1] = (r_bit << 2) | (g_bit << 1) | b_bit
+			}
 		}
-
-		time.Sleep(1000 * time.Millisecond)
-		if color == 3 {
-			color = 0
-		} else {
-			color++
-		}
+	} else {
+		packet = []byte{byte(opCode)}
 	}
+
+	n, err := port.Write(packet)
+	if err != nil {
+		log.Printf("Error writing to serial port: %v", err)
+	} else {
+		fmt.Printf("Sent %d bytes.\n", n)
+	}
+
 }
