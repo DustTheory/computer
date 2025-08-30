@@ -1,8 +1,0 @@
-<testsuites name="results">
-  <testsuite name="all" package="all">
-    <property name="random_seed" value="1756537497" />
-    <testcase name="my_first_test" classname="test" file="/home/emma/gpu/testbenches/test.py" lineno="5" time="0.00044345855712890625" sim_time_ns="1.001" ratio_time="2257.2571526881716">
-      <failure message="Test failed with RANDOM_SEED=1756537497" />
-    </testcase>
-  </testsuite>
-</testsuites>
