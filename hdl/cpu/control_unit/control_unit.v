@@ -6,12 +6,12 @@
 `include "../memory/memory.vh"
 
 module control_unit (
-    input [6:0] i_Op_Code,
-    input [2:0] i_Funct3,
+    input [OP_CODE_WIDTH:0] i_Op_Code,
+    input [FUNC3_WIDTH:0] i_Funct3,
     input i_Funct7_Bit_5,
     input i_Branch_Enable,
-    output reg [REG_ADDR_WIDTH-1:0] o_Port_A_Select,
-    output reg [REG_ADDR_WIDTH-1:0] o_Port_B_Select,
+    output reg o_Port_A_Select,
+    output reg o_Port_B_Select,
     output reg [REG_ADDR_WIDTH-1:0] o_Reg_Write_Select,
     output reg [ALU_SEL_WIDTH:0] o_Alu_Select,
     output reg [CMP_SEL_WIDTH:0] o_Cmp_Select,
@@ -63,7 +63,7 @@ module control_unit (
             o_Reg_Write_Select = REG_WRITE_ALU;
           end
           FUNC3_ALU_SRL_SRA: begin
-            o_Alu_Select = (i_Funct7_Bit_5) ? ALU_SEL_SRL : ALU_SEL_SRA;
+            o_Alu_Select = (i_Funct7_Bit_5) ? ALU_SEL_SRA : ALU_SEL_SRL;
             o_Cmp_Select = CMP_SEL_UNKNOWN;
             o_Port_B_Select = 1'b1;
             o_Reg_Write_Select = REG_WRITE_ALU;
@@ -159,7 +159,7 @@ module control_unit (
             o_Reg_Write_Select = REG_WRITE_ALU;
           end
           FUNC3_ALU_SRL_SRA: begin
-            o_Alu_Select = (i_Funct7_Bit_5) ? ALU_SEL_SRL : ALU_SEL_SRA;
+            o_Alu_Select = (i_Funct7_Bit_5) ? ALU_SEL_SRA : ALU_SEL_SRL;
             o_Cmp_Select = CMP_SEL_UNKNOWN;
             o_Reg_Write_Select = REG_WRITE_ALU;
           end
@@ -189,7 +189,7 @@ module control_unit (
         o_Alu_Select = ALU_SEL_ADD;
         o_Cmp_Select = CMP_SEL_UNKNOWN;
         o_Imm_Select = IMM_I_TYPE;
-        o_Reg_Write_Select = REG_WRITE_ALU;
+        o_Reg_Write_Select = REG_WRITE_PC_NEXT;
         o_Load_Store_Type = LS_TYPE_NONE;
       end
       OP_I_TYPE_LOAD: begin

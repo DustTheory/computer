@@ -1,0 +1,46 @@
+# Constants for immediate types
+IMM_U_TYPE = 0
+IMM_B_TYPE = 1
+IMM_I_TYPE = 2
+IMM_J_TYPE = 3
+IMM_S_TYPE = 4
+IMM_UNKNOWN_TYPE = 5
+
+# Constants for comparator operation select values
+CMP_SEL_BEQ = 0
+CMP_SEL_BNE = 1
+CMP_SEL_BLTU = 2
+CMP_SEL_BGEU = 3
+CMP_SEL_BLT = 4
+CMP_SEL_BGE = 5
+CMP_SEL_UNKNOWN = 6
+
+# Constants for ALU operation select values
+ALU_SEL_ADD = 0
+ALU_SEL_SUB = 1
+ALU_SEL_AND = 2
+ALU_SEL_OR = 3
+ALU_SEL_XOR = 4
+ALU_SEL_SLL = 5
+ALU_SEL_SRL = 6
+ALU_SEL_SRA = 7
+ALU_SEL_UNKNOWN = 8
+
+# Constants for Load/Store types
+LS_TYPE_LOAD_WORD = 0
+LS_TYPE_LOAD_HALF = 1
+LS_TYPE_LOAD_HALF_UNSIGNED = 2
+LS_TYPE_LOAD_BYTE = 3
+LS_TYPE_LOAD_BYTE_UNSIGNED = 4
+LS_TYPE_STORE_WORD = 5
+LS_TYPE_STORE_HALF = 6
+LS_TYPE_STORE_BYTE = 7
+LS_TYPE_NONE = 8
+
+# Control signals for what to write to the register file
+REG_WRITE_ALU = 0
+REG_WRITE_CU = 1
+REG_WRITE_IMM = 2
+REG_WRITE_PC_NEXT = 3
+REG_WRITE_DMEM = 4
+REG_WRITE_NONE = 5

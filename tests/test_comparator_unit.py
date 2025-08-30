@@ -1,14 +1,14 @@
 import cocotb
 from cocotb.triggers import Timer
-
-# Constants
-CMP_SEL_BEQ = 0
-CMP_SEL_BNE = 1
-CMP_SEL_BLTU = 2
-CMP_SEL_BGEU = 3
-CMP_SEL_BLT = 4
-CMP_SEL_BGE = 5
-CMP_SEL_UNKNOWN = 6
+from constants import (
+    CMP_SEL_BEQ,
+    CMP_SEL_BNE,
+    CMP_SEL_BLTU,
+    CMP_SEL_BGEU,
+    CMP_SEL_BLT,
+    CMP_SEL_BGE,
+    CMP_SEL_UNKNOWN
+)
 
 wait_ns = 1
 

@@ -1,3 +1,5 @@
+PYTHONPATH := $(PYTHONPATH):$(CURDIR)
+
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
@@ -10,9 +12,8 @@ VERILATOR_INCLUDE_DIRS = $(shell find $(SRC_DIR) -type d)
 EXTRA_ARGS += $(addprefix -I, $(VERILATOR_INCLUDE_DIRS))
 
 TOPLEVEL = harness
-MODULE = test_arithmetic_logic_unit,test_comparator_unit,test_immediate_unit,test_register_file
+MODULE = test_arithmetic_logic_unit,test_comparator_unit,test_immediate_unit,test_register_file,test_control_unit
 
-export SIM TOPLEVEL_LANG VERILOG_SOURCES TOPLEVEL MODULE EXTRA_ARGS
+export SIM TOPLEVEL_LANG VERILOG_SOURCES TOPLEVEL MODULE EXTRA_ARGS PYTHONPATH
 
-# Include the cocotb makefile
 include $(shell cocotb-config --makefiles)/Makefile.sim

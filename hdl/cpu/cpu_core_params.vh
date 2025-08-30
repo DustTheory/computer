@@ -4,7 +4,10 @@
 parameter XLEN = 32;  // Register width
 parameter REG_ADDR_WIDTH = $clog2(XLEN);  // Register address width
 
-// Bit widths for various selects
+// Bit widths for various selects and operation codes
+localparam OP_CODE_WIDTH = 6;
+localparam FUNC3_WIDTH = 2;
+localparam FUNC7_WIDTH = 6;
 localparam ALU_SEL_WIDTH = 4;
 localparam CMP_SEL_WIDTH = 3;
 localparam IMM_SEL_WIDTH = 3;

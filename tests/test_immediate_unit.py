@@ -1,13 +1,13 @@
 import cocotb
 from cocotb.triggers import Timer
-
-# Constants
-IMM_U_TYPE = 0
-IMM_B_TYPE = 1
-IMM_I_TYPE = 2
-IMM_J_TYPE = 3
-IMM_S_TYPE = 4
-IMM_UNKNOWN_TYPE = 5
+from constants import (
+    IMM_U_TYPE,
+    IMM_B_TYPE,
+    IMM_I_TYPE,
+    IMM_J_TYPE,
+    IMM_S_TYPE,
+    IMM_UNKNOWN_TYPE
+)
 
 wait_ns = 1
 

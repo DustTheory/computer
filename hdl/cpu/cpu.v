@@ -72,7 +72,7 @@ module cpu (
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Reg_Source_1),
       .i_Read_Addr_2(w_Reg_Source_2),
-      .i_Write_Addr(i_Instruction[11:7]),
+      .i_Write_Addr(i_Instruction[11:FUNC3_WIDTH+1]),
       .i_Write_Data(w_Reg_Write_data),
       .i_Write_Enable(w_Reg_Write_Enable),
       .o_Read_Data_1(i_Instruction[19:15]),  // Rs1
@@ -80,7 +80,7 @@ module cpu (
   );
 
   control_unit cu (
-      .i_Op_Code(i_Instruction[6:0]),
+      .i_Op_Code(i_Instruction[FUNC3_WIDTH:0]),
       .i_Funct3(i_Instruction[14:12]),
       .i_Funct7_Bit_5(i_Instruction[30]),
       .i_Branch_Enable(w_Compare_Result),

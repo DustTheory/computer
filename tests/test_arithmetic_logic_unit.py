@@ -1,16 +1,16 @@
 import cocotb
 from cocotb.triggers import Timer
-
-# Constants
-ALU_SEL_ADD = 0
-ALU_SEL_SUB = 1
-ALU_SEL_AND = 2
-ALU_SEL_OR = 3
-ALU_SEL_XOR = 4
-ALU_SEL_SLL = 5
-ALU_SEL_SRL = 6
-ALU_SEL_SRA = 7
-ALU_SEL_UNKNOWN = 8
+from constants import (
+    ALU_SEL_ADD,
+    ALU_SEL_SUB,
+    ALU_SEL_AND,
+    ALU_SEL_OR,
+    ALU_SEL_XOR,
+    ALU_SEL_SLL,
+    ALU_SEL_SRL,
+    ALU_SEL_SRA,
+    ALU_SEL_UNKNOWN
+)
 
 wait_ns = 1
 
