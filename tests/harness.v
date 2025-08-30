@@ -9,5 +9,8 @@ module harness #(
   arithmetic_logic_unit alu ();
   comparator_unit comparator_unit ();
   immediate_unit immediate_unit ();
+  // load_store_unit load_store_unit ();
+  // control_unit control_unit ();
+  register_file register_file ();
   // verilator lint_on  PINMISSING
 endmodule

@@ -1,26 +1,12 @@
 `timescale 1ns / 1ps
 `include "cpu_core_params.vh"
 
-module cpu #(
-    parameter XLEN = 32,
-    parameter REG_ADDR_WIDTH = 5
-) (
+module cpu (
     input i_Reset,
     input i_Clock,
     input [XLEN-1:0] i_Instruction,
     output [XLEN-1:0] o_Instruction_Addr
 );
-
-  // Load/Store types
-  parameter LS_TYPE_LOAD_WORD = 0;
-  parameter LS_TYPE_LOAD_HALF = 1;
-  parameter LS_TYPE_LOAD_HALF_UNSIGNED = 2;
-  parameter LS_TYPE_LOAD_BYTE = 3;
-  parameter LS_TYPE_LOAD_BYTE_UNSIGNED = 4;
-  parameter LS_TYPE_STORE_WORD = 5;
-  parameter LS_TYPE_STORE_HALF = 6;
-  parameter LS_TYPE_STORE_BYTE = 7;
-  parameter LS_TYPE_NONE = 8;
 
   reg [XLEN-1:0] r_PC;  // Program Counter
   wire [XLEN-1:0] w_Immediate;
@@ -33,8 +19,8 @@ module cpu #(
 
   wire [ALU_SEL_WIDTH:0] w_Alu_Select;  // ALU opcode - comes from the control unit
   wire [CMP_SEL_WIDTH:0] w_Compare_Select;  // Comparator opcode - comes from the control unit
-  wire [2:0] w_Imm_Select;  // Immediate type - comes from the control unit
-  wire [4:0] w_Load_Store_Type;  // Load/Store type - comes from the control unit
+  wire [IMM_SEL_WIDTH:0] w_Imm_Select;  // Immediate type - comes from the control unit
+  wire [LS_SEL_WIDTH:0] w_Load_Store_Type;  // Load/Store type - comes from the control unit
   wire [XLEN-1:0] w_Alu_Result;  // Result of the ALU operation
   wire [XLEN-1:0] w_Compare_Result;  // Result of the comparison operation
 
@@ -82,10 +68,7 @@ module cpu #(
       .o_Compare_Result(w_Compare_Result)
   );
 
-  register_file #(
-      .XLEN(XLEN),
-      .REG_ADDR_WIDTH(REG_ADDR_WIDTH)
-  ) reg_file (
+  register_file reg_file (
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Reg_Source_1),
       .i_Read_Addr_2(w_Reg_Source_2),
@@ -96,10 +79,7 @@ module cpu #(
       .o_Read_Data_2(i_Instruction[24:20])  // Rs2
   );
 
-  control_unit #(
-      .XLEN(XLEN),
-      .REG_ADDR_WIDTH(REG_ADDR_WIDTH)
-  ) cu (
+  control_unit cu (
       .i_Op_Code(i_Instruction[6:0]),
       .i_Funct3(i_Instruction[14:12]),
       .i_Funct7_Bit_5(i_Instruction[30]),
@@ -117,8 +97,6 @@ module cpu #(
   );
 
   memory #(
-      .XLEN(XLEN),
-      .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
       .MEMORY_DEPTH(1024)
   ) mem (
       .i_Clock(i_Clock),

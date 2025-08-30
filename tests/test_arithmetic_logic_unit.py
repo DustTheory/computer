@@ -12,6 +12,8 @@ ALU_SEL_SRL = 6
 ALU_SEL_SRA = 7
 ALU_SEL_UNKNOWN = 8
 
+wait_ns = 1
+
 
 @cocotb.test()
 async def addition_test(dut):
@@ -35,7 +37,7 @@ async def addition_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_ADD
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
 
         result = dut.alu.o_Alu_Result.value.signed_integer
         assert result == expected, f"{a} + {b} should be {result}, got {expected}"
@@ -63,7 +65,7 @@ async def subtraction_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_SUB
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.signed_integer
         assert result == expected, f"{a} - {b} should be {expected}, got {result}"
@@ -86,7 +88,7 @@ async def and_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_AND
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.integer
         assert result == expected, f"{a:04b} AND {b:04b} should be {expected:04b}, got {result:04b}"
@@ -109,7 +111,7 @@ async def or_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_OR
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.integer
         assert result == expected, f"{a:04b} OR {b:04b} should be {expected:04b}, got {result:04b}"
@@ -132,7 +134,7 @@ async def xor_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_XOR
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.integer
         assert result == expected, f"{a:04b} XOR {b:04b} should be {expected:04b}, got {result:04b}"
@@ -154,7 +156,7 @@ async def sll_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_SLL
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.integer
         assert result == expected, f"{a} SLL {b} should be {expected}, got {result}"
@@ -177,7 +179,7 @@ async def srl_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_SRL
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.integer
         assert result == expected, f"{a:04b} SRL {b} should be {expected:04b}, got {result:04b}"
@@ -200,7 +202,7 @@ async def sra_test(dut):
         dut.alu.i_Input_B.value = b
         dut.alu.i_Alu_Select.value = ALU_SEL_SRA
 
-        await Timer(10, units="ns")
+        await Timer(wait_ns, units="ns")
         
         result = dut.alu.o_Alu_Result.value.integer
         assert result == expected, f"{a:04b} SRA {b} should be {expected:04b}, got {result:04b}"
@@ -212,6 +214,6 @@ async def unknown_opcode_test(dut):
     dut.alu.i_Input_A.value = 5
     dut.alu.i_Input_B.value = 3
     dut.alu.i_Alu_Select.value = ALU_SEL_UNKNOWN
-    await Timer(10, units="ns")
+    await Timer(wait_ns, units="ns")
     result = dut.alu.o_Alu_Result.value.integer
     assert result == 0, f"Unknown opcode should result in 0, got {result}"

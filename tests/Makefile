@@ -10,7 +10,7 @@ VERILATOR_INCLUDE_DIRS = $(shell find $(SRC_DIR) -type d)
 EXTRA_ARGS += $(addprefix -I, $(VERILATOR_INCLUDE_DIRS))
 
 TOPLEVEL = harness
-MODULE = test_arithmetic_logic_unit,test_comparator_unit,test_immediate_unit
+MODULE = test_arithmetic_logic_unit,test_comparator_unit,test_immediate_unit,test_register_file
 
 export SIM TOPLEVEL_LANG VERILOG_SOURCES TOPLEVEL MODULE EXTRA_ARGS
 

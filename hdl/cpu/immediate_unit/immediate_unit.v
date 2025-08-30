@@ -34,8 +34,8 @@ module immediate_unit (
             1'b0
           }
       );
-
       IMM_UNKNOWN_TYPE: o_Immediate = 0;
+      default: o_Immediate = 0;
     endcase
   end
   // verilator lint_on  WIDTH

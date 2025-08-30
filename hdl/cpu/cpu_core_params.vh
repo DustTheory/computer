@@ -8,6 +8,7 @@ parameter REG_ADDR_WIDTH = $clog2(XLEN);  // Register address width
 localparam ALU_SEL_WIDTH = 4;
 localparam CMP_SEL_WIDTH = 3;
 localparam IMM_SEL_WIDTH = 3;
+localparam LS_SEL_WIDTH = 4;
 
 // Control signals for what to write to the register file
 localparam REG_WRITE_ALU = 0;
