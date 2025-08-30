@@ -1,3 +1,4 @@
 gpu/
 tests/__pycache__/
 tests/test_env/
+tests/results.xml
