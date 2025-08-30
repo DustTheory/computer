@@ -16,14 +16,14 @@ module instruction_engine
   localparam s_DECODE_AND_EXECUTE  = 2'd1;
   localparam s_EXECUTE = 2'd2;
 
-  localparam op_NOP = 3'b000;
-  localparam op_RED = 3'b001;
-  localparam op_GREEN = 3'b010;
-  localparam op_BLUE = 3'b011;
-  localparam op_FRAME = 3'b100;
-  localparam op_STORE = 3'b101;
-  localparam op_DRAW = 3'b110;
-  localparam op_RESERVED = 3'b111;
+  localparam op_NOP = 8'b000;
+  localparam op_RED = 8'b001;
+  localparam op_GREEN = 8'b010;
+  localparam op_BLUE = 8'b011;
+  localparam op_FRAME = 8'b100;
+  localparam op_STORE = 8'b101;
+  localparam op_DRAW = 8'b110;
+  localparam op_RESERVED = 8'b111;
 
   reg [1:0] r_State = s_IDLE;
   reg [7:0] r_Op_Code = 0;
@@ -38,82 +38,82 @@ module instruction_engine
       case(r_Op_Code)
         op_NOP:
         begin
-          r_Next_State <= 1;
-          o_Write_Enable <= 0;
-          o_Write_Addr <= 0;
-          o_Write_Data <= 0;
+          r_Next_State = 1;
+          o_Write_Enable = 0;
+          o_Write_Addr = 0;
+          o_Write_Data = 0;
         end
         op_RED:
         begin
           if(r_Byte_Index == FRAMEBUFFER_DEPTH - 1)
-            r_Next_State <= 1;
+            r_Next_State = 1;
           else
           begin
-            r_Next_State <= 0;
+            r_Next_State = 0;
           end
-          o_Write_Enable <= 1;
-          o_Write_Addr <= r_Byte_Index;
-          o_Write_Data <= 3'b100;
+          o_Write_Enable = 1;
+          o_Write_Addr = r_Byte_Index;
+          o_Write_Data = 3'b100;
         end
         op_GREEN:
         begin
           if(r_Byte_Index == FRAMEBUFFER_DEPTH - 1)
-            r_Next_State <= 1;
+            r_Next_State = 1;
           else
           begin
-            r_Next_State <= 0;
+            r_Next_State = 0;
           end
-          o_Write_Enable <= 1;
-          o_Write_Addr <= r_Byte_Index;
-          o_Write_Data <= 0'b010;
+          o_Write_Enable = 1;
+          o_Write_Addr = r_Byte_Index;
+          o_Write_Data = 0'b010;
         end
         op_BLUE:
         begin
           if(r_Byte_Index == FRAMEBUFFER_DEPTH - 1)
-            r_Next_State <= 1;
+            r_Next_State = 1;
           else
           begin
-            r_Next_State <= 0;
+            r_Next_State = 0;
           end
-          o_Write_Enable <= 1;
-          o_Write_Addr <= r_Byte_Index;
-          o_Write_Data <= 3'b001;
+          o_Write_Enable = 1;
+          o_Write_Addr = r_Byte_Index;
+          o_Write_Data = 3'b001;
         end
         op_FRAME:
         begin
           if(r_Byte_Index == FRAMEBUFFER_DEPTH - 1)
-            r_Next_State <= 1;
+            r_Next_State = 1;
           else
           begin
-            r_Next_State <= 0;
+            r_Next_State = 0;
           end
-          o_Write_Enable <= 1;
-          o_Write_Addr <= r_Byte_Index;
-          o_Write_Data <= i_Rx_Byte;
+          o_Write_Enable = 1;
+          o_Write_Addr = r_Byte_Index;
+          o_Write_Data = i_Rx_Byte[2:0];
         end
         // op_STORE:
         // begin
-        //   r_End_Of_Decode <= 1;
+        //   r_End_Of_Decode = 1;
         // end
         // op_DRAW:
         // begin
-        //   r_End_Of_Decode <= 1;
+        //   r_End_Of_Decode = 1;
         // end
         default:
         begin
-          r_Next_State <= 1;
-          o_Write_Enable <= 0;
-          o_Write_Addr <= 0;
-          o_Write_Data <= 0;
+          r_Next_State = 1;
+          o_Write_Enable = 0;
+          o_Write_Addr = 0;
+          o_Write_Data = 0;
         end
       endcase
     end
     else
     begin
-      o_Write_Addr <= 0;
-      o_Write_Data <= 0;
-      o_Write_Enable <= 0;
-      r_Next_State <= 0;
+      o_Write_Addr = 0;
+      o_Write_Data = 0;
+      o_Write_Enable = 0;
+      r_Next_State = 0;
     end
   end
 
@@ -141,6 +141,11 @@ module instruction_engine
             r_Byte_Index <= r_Byte_Index + 1;
             r_State <= s_DECODE_AND_EXECUTE;
           end
+        end
+        default:
+        begin
+          r_State <= s_IDLE;
+          r_Byte_Index <= 0;
         end
       endcase
     end

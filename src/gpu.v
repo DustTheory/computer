@@ -11,7 +11,7 @@ module gpu(
 
   localparam CLOCK_FREQUENCY = 100_000_000;
   localparam UART_BAUD_RATE = 115200;
-  localparam UART_CLOCKS_PER_BIT = CLOCK_FREQUENCY/UART_BAUD_RATE;
+  localparam UART_CLOCKS_PER_BIT = (CLOCK_FREQUENCY/UART_BAUD_RATE);
 
   localparam RESOLUTION_W = 640;
   localparam RESOLUTION_H = 480;
@@ -67,6 +67,18 @@ module gpu(
              .o_Vertical_Sync(o_Vertical_Sync),
              .o_RGB(o_RGB)
            );
+
+
+  // cpu CPU(
+  //       .i_Clock(i_Clock),
+  //       .i_Write_Enable(w_Write_Enable),
+  //       .i_Load_Store_Type(3'b101), // LS_TYPE_STORE_WORD
+  //       .i_Instruction_Addr(32'b0),
+  //       .i_Data_Addr(32'b0),
+  //       .i_Write_Data(32'b0),
+  //       .o_Read_Data(),
+  //       .o_Instruction()
+  //     );
 
   assign o_Write_Enable = w_Write_Enable;
 

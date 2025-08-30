@@ -1,2 +1,3 @@
-gpu/gpu.cache/
-gpu/gpu.runs/
+gpu/
+testbenches/__pycache__/
+testbenches/test_env/

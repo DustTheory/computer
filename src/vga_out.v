@@ -33,10 +33,10 @@ module vga_out
   reg [15:0] r_V_Counter = 0;
 
 
-  localparam STATE_VISIBLE = 0;
-  localparam STATE_FRONT_PORCH = 1;
-  localparam STATE_SYNC = 2;
-  localparam STATE_BACK_PORCH = 3;
+  localparam [1:0] STATE_VISIBLE = 0;
+  localparam [1:0] STATE_FRONT_PORCH = 1;
+  localparam [1:0] STATE_SYNC = 2;
+  localparam [1:0] STATE_BACK_PORCH = 3;
 
   reg [1:0] r_H_State;
   reg [1:0] r_V_State;
@@ -85,7 +85,7 @@ module vga_out
     end
   end
 
-  assign o_Fb_Read_Addr = (r_V_Counter * VISIBLE_H) + r_H_Counter;
+  assign o_Fb_Read_Addr = (r_V_Counter * VISIBLE_H[15:0]) + {16'd0, r_H_Counter};
   assign o_RGB = (w_Visible) ? i_Fb_Read_Data :  3'b000;
   assign o_Horizontal_Sync = ~(r_H_State == STATE_SYNC); // Invert for active low
   assign o_Vertical_Sync = ~(r_V_State == STATE_SYNC); // Invert for active low
