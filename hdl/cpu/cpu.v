@@ -3,12 +3,11 @@
 
 module cpu (
     input i_Reset,
-    input i_Clock,
-    input [XLEN-1:0] i_Instruction,
-    output [XLEN-1:0] o_Instruction_Addr
+    input i_Clock
 );
 
   reg [XLEN-1:0] r_PC;  // Program Counter
+  wire [XLEN-1:0] w_Instruction;
   wire [XLEN-1:0] w_Immediate;
   wire [XLEN-1:0] w_PC_Next = r_PC + 4;
 
@@ -22,16 +21,18 @@ module cpu (
   wire [IMM_SEL_WIDTH:0] w_Imm_Select;  // Immediate type - comes from the control unit
   wire [LS_SEL_WIDTH:0] w_Load_Store_Type;  // Load/Store type - comes from the control unit
   wire [XLEN-1:0] w_Alu_Result;  // Result of the ALU operation
-  wire [XLEN-1:0] w_Compare_Result;  // Result of the comparison operation
+  // verilator lint_off UNOPTFLAT
+  wire w_Compare_Result;  // Result of the comparison operation
+  // verilator lint_on UNOPTFLAT
 
   wire w_Port_A_Select;  // Selects Rs1 or PC for ALU input A
   wire w_Port_B_Select;  // Selects Rs2 or Immediate for ALU input B
 
   // Inputs for the ALU/Comparator - based off w_Port_A_Select and w_Port_B_Select
-  wire w_Alu_Port_A = w_Port_A_Select ? w_Reg_Source_1 : r_PC;
-  wire w_Alu_Port_B = w_Port_B_Select ? w_Reg_Source_2 : w_Immediate;
-  wire w_Comp_Port_A = w_Reg_Source_1;
-  wire w_Comp_Port_B = w_Port_B_Select ? w_Immediate : w_Reg_Source_2;
+  wire [XLEN-1:0] w_Alu_Port_A = w_Port_A_Select ? w_Reg_Source_1 : r_PC;
+  wire [XLEN-1:0] w_Alu_Port_B = w_Port_B_Select ? w_Reg_Source_2 : w_Immediate;
+  wire [XLEN-1:0] w_Comp_Port_A = w_Reg_Source_1;
+  wire [XLEN-1:0] w_Comp_Port_B = w_Port_B_Select ? w_Immediate : w_Reg_Source_2;
 
   // What data to write to the register file
   wire [REG_ADDR_WIDTH-1:0] w_Reg_Write_Select;
@@ -40,12 +41,15 @@ module cpu (
   wire w_Reg_Write_Enable;  // Enables writing to the register file
   wire w_Mem_Write_Enable;  // Enables writing to memory (not used in this example)
 
+  wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Instruction[19:15];
+  wire [REG_ADDR_WIDTH-1:0] w_Rs_2 = w_Instruction[24:20];
+
   reg [XLEN-1:0] w_Reg_Write_data;
 
   always @* begin
     case (w_Reg_Write_Select)
       REG_WRITE_ALU: w_Reg_Write_data = w_Alu_Result;
-      REG_WRITE_CU: w_Reg_Write_data = w_Compare_Result;
+      REG_WRITE_CU: w_Reg_Write_data = {31'b0, w_Compare_Result};
       REG_WRITE_IMM: w_Reg_Write_data = w_Immediate;
       REG_WRITE_PC_NEXT: w_Reg_Write_data = w_PC_Next;
       REG_WRITE_DMEM: w_Reg_Write_data = w_Dmem_Data;
@@ -70,19 +74,19 @@ module cpu (
 
   register_file reg_file (
       .i_Clock(i_Clock),
-      .i_Read_Addr_1(w_Reg_Source_1),
-      .i_Read_Addr_2(w_Reg_Source_2),
-      .i_Write_Addr(i_Instruction[11:FUNC3_WIDTH+1]),
+      .i_Read_Addr_1(w_Rs_1),
+      .i_Read_Addr_2(w_Rs_2),
+      .i_Write_Addr(w_Instruction[11:7]),
       .i_Write_Data(w_Reg_Write_data),
       .i_Write_Enable(w_Reg_Write_Enable),
-      .o_Read_Data_1(i_Instruction[19:15]),  // Rs1
-      .o_Read_Data_2(i_Instruction[24:20])  // Rs2
+      .o_Read_Data_1(w_Reg_Source_1),
+      .o_Read_Data_2(w_Reg_Source_2)
   );
 
   control_unit cu (
-      .i_Op_Code(i_Instruction[FUNC3_WIDTH:0]),
-      .i_Funct3(i_Instruction[14:12]),
-      .i_Funct7_Bit_5(i_Instruction[30]),
+      .i_Op_Code(w_Instruction[OP_CODE_WIDTH:0]),
+      .i_Funct3(w_Instruction[14:12]),
+      .i_Funct7_Bit_5(w_Instruction[30]),
       .i_Branch_Enable(w_Compare_Result),
       .o_Port_A_Select(w_Port_A_Select),
       .o_Port_B_Select(w_Port_B_Select),
@@ -98,16 +102,16 @@ module cpu (
 
   immediate_unit imm_unit (
       .i_Imm_Select(w_Imm_Select),
-      .i_Instruction_No_Opcode(i_Instruction[XLEN-1:OP_CODE_WIDTH+1]),
+      .i_Instruction_No_Opcode(w_Instruction[XLEN-1:OP_CODE_WIDTH+1]),
       .o_Immediate(w_Immediate)
   );
 
   instruction_memory #(
       .MEMORY_DEPTH(1024)
-  ) instr_mem (
+  ) instruction_memory (
       .i_Clock(i_Clock),
       .i_Instruction_Addr(r_PC),
-      .o_Instruction(o_Instruction_Addr)
+      .o_Instruction(w_Instruction)
   );
 
   memory #(

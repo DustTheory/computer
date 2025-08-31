@@ -11,7 +11,7 @@ module instruction_memory #(
 
   reg [XLEN-1:0] Memory_Array[0:MEMORY_DEPTH-1];
 
-  always @(i_Clock) begin
+  always @(posedge i_Clock) begin
     o_Instruction = Memory_Array[i_Instruction_Addr>>2];
   end
 

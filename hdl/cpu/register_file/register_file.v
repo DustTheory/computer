@@ -12,13 +12,13 @@ module register_file (
     output reg [XLEN-1:0] o_Read_Data_2
 );
 
-  reg [XLEN-1:0] registers[0:(1 << REG_ADDR_WIDTH)-1];
+  reg [XLEN-1:0] Registers[0:(1 << REG_ADDR_WIDTH)-1];
 
-  assign o_Read_Data_1 = i_Read_Addr_1 != 0 ? registers[i_Read_Addr_1] : 0;
-  assign o_Read_Data_2 = i_Read_Addr_2 != 0 ? registers[i_Read_Addr_2] : 0;
+  assign o_Read_Data_1 = i_Read_Addr_1 != 0 ? Registers[i_Read_Addr_1] : 0;
+  assign o_Read_Data_2 = i_Read_Addr_2 != 0 ? Registers[i_Read_Addr_2] : 0;
 
   always @(posedge i_Clock) begin
-    if (i_Write_Enable && i_Write_Addr != 0) registers[i_Write_Addr] <= i_Write_Data;
+    if (i_Write_Enable && i_Write_Addr != 0) Registers[i_Write_Addr] <= i_Write_Data;
   end
 
 endmodule

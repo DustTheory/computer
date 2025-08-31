@@ -1,9 +1,6 @@
 `timescale 1ns / 1ps
 
-module harness #(
-    parameter XLEN = 32,
-    parameter REG_ADDR_WIDTH = 5
-) ();
+module cpu_unit_tests_harness ();
 
   // verilator lint_off PINMISSING
   arithmetic_logic_unit alu ();
