@@ -1,0 +1,2 @@
+-explicit-parameter-storage-type
+-always-comb

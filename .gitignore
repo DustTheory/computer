@@ -1,2 +1,5 @@
-gpu/gpu.cache/
-gpu/gpu.runs/
+gpu/
+**/*/__pycache__/
+tests/test_env/
+tests/results.xml
+tests/sim_build

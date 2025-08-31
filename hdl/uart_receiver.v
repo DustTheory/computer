@@ -42,7 +42,7 @@ module uart_receiver
       end
       s_RX_START_BIT:
       begin
-        if(r_Clock_Count == (CLKS_PER_BIT-1)/2)
+        if(r_Clock_Count == (CLKS_PER_BIT[15:0]-1)/2)
         begin
           if(r_Rx_Data == 1'b0)
           begin
@@ -60,7 +60,7 @@ module uart_receiver
       end
       s_RX_DATA_BITS:
       begin
-        if(r_Clock_Count < CLKS_PER_BIT - 1)
+        if(r_Clock_Count <  CLKS_PER_BIT[15:0] - 1)
         begin
           r_Clock_Count <= r_Clock_Count + 1;
           r_SM_Main <= s_RX_DATA_BITS;
@@ -83,7 +83,7 @@ module uart_receiver
       end
       s_RX_STOP_BIT:
       begin
-        if (r_Clock_Count < CLKS_PER_BIT-1)
+        if (r_Clock_Count < CLKS_PER_BIT[15:0]-1)
         begin
           r_Clock_Count <= r_Clock_Count + 1;
           r_SM_Main     <= s_RX_STOP_BIT;
