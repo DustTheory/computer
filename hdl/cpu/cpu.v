@@ -96,17 +96,29 @@ module cpu (
       .o_Load_Store_Type(w_Load_Store_Type)
   );
 
+  immediate_unit imm_unit (
+      .i_Imm_Select(w_Imm_Select),
+      .i_Instruction_No_Opcode(i_Instruction[XLEN-1:OP_CODE_WIDTH+1]),
+      .o_Immediate(w_Immediate)
+  );
+
+  instruction_memory #(
+      .MEMORY_DEPTH(1024)
+  ) instr_mem (
+      .i_Clock(i_Clock),
+      .i_Instruction_Addr(r_PC),
+      .o_Instruction(o_Instruction_Addr)
+  );
+
   memory #(
       .MEMORY_DEPTH(1024)
   ) mem (
       .i_Clock(i_Clock),
       .i_Load_Store_Type(w_Load_Store_Type),
-      .i_Instruction_Addr(r_PC),
-      .i_Data_Addr(w_Alu_Result),
-      .i_Write_Data(w_Reg_Source_2),
       .i_Write_Enable(w_Mem_Write_Enable),
-      .o_Read_Data(w_Dmem_Data),
-      .o_Instruction(o_Instruction_Addr)
+      .i_Addr(w_Alu_Result),
+      .i_Data(w_Reg_Source_2),
+      .o_Data(w_Dmem_Data)
   );
 
   always @(posedge i_Clock, posedge i_Reset) begin
@@ -116,8 +128,6 @@ module cpu (
       r_PC <= w_Pc_Alu_Mux_Select ? w_Alu_Result : w_PC_Next;
     end
   end
-
-
 
 
 endmodule

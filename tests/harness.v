@@ -11,5 +11,7 @@ module harness #(
   immediate_unit immediate_unit ();
   control_unit control_unit ();
   register_file register_file ();
+  memory memory ();
+  instruction_memory instruction_memory ();
   // verilator lint_on  PINMISSING
 endmodule
