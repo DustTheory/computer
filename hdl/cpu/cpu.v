@@ -94,7 +94,7 @@ module cpu (
       .o_Alu_Select(w_Alu_Select),
       .o_Cmp_Select(w_Compare_Select),
       .o_Imm_Select(w_Imm_Select),
-      .o_Pc_Alu_Mux_Select(),
+      .o_Pc_Alu_Mux_Select(w_Pc_Alu_Mux_Select),
       .o_Reg_Write_Enable(w_Reg_Write_Enable),
       .o_Mem_Write_Enable(w_Mem_Write_Enable),
       .o_Load_Store_Type(w_Load_Store_Type)
