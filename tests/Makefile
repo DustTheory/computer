@@ -25,7 +25,8 @@ CPU_UNIT_TESTS_MODULE = "cpu.unit_tests.test_arithmetic_logic_unit, \
 
 CPU_INTEGRATION_TESTS_TOPLEVEL = cpu_integration_tests_harness
 CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
-		cpu.integration_tests.test_lui_instruction"
+		cpu.integration_tests.test_lui_instruction, \
+		cpu.integration_tests.test_auipc_instruction"
 
 TOPLEVEL = $(CPU_INTEGRATION_TESTS_TOPLEVEL)
 MODULE = $(CPU_INTEGRATION_TESTS_MODULE)

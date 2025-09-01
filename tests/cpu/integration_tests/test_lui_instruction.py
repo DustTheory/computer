@@ -4,7 +4,7 @@ from constants import (
     OP_U_TYPE_LUI,
 )
 
-wait_ns = 10
+wait_ns = 1
 
 @cocotb.test()
 async def test_lui_instruction(dut):
