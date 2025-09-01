@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     IMM_U_TYPE,
     IMM_B_TYPE,
     IMM_I_TYPE,

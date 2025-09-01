@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     OP_J_TYPE,
 )
 
@@ -8,7 +8,7 @@ wait_ns = 1
 
 
 @cocotb.test()
-async def test_auipc_instruction(dut):
+async def test_jal_instruction(dut):
     """Test JAL instruction"""
 
     dest_register = 13

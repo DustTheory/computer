@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     CMP_SEL_BEQ,
     CMP_SEL_BNE,
     CMP_SEL_BLTU,

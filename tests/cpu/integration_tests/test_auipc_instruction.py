@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     OP_U_TYPE_AUIPC,
 )
 
