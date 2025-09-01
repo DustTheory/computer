@@ -1,10 +1,10 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     OP_U_TYPE_LUI,
 )
 
-wait_ns = 10
+wait_ns = 1
 
 @cocotb.test()
 async def test_lui_instruction(dut):

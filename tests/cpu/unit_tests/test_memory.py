@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     LS_TYPE_LOAD_WORD,
     LS_TYPE_LOAD_HALF,
     LS_TYPE_LOAD_HALF_UNSIGNED,
@@ -9,7 +9,6 @@ from constants import (
     LS_TYPE_STORE_WORD,
     LS_TYPE_STORE_HALF,
     LS_TYPE_STORE_BYTE,
-    LS_TYPE_NONE
 )
 
 wait_ns = 1

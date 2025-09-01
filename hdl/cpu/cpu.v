@@ -59,8 +59,8 @@ module cpu (
 
 
   arithmetic_logic_unit alu (
-      .i_Input_A(w_Reg_Source_1),
-      .i_Input_B(w_Reg_Source_2),
+      .i_Input_A(w_Alu_Port_A),
+      .i_Input_B(w_Alu_Port_B),
       .i_Alu_Select(w_Alu_Select),
       .o_Alu_Result(w_Alu_Result)
   );
@@ -94,7 +94,7 @@ module cpu (
       .o_Alu_Select(w_Alu_Select),
       .o_Cmp_Select(w_Compare_Select),
       .o_Imm_Select(w_Imm_Select),
-      .o_Pc_Alu_Mux_Select(),
+      .o_Pc_Alu_Mux_Select(w_Pc_Alu_Mux_Select),
       .o_Reg_Write_Enable(w_Reg_Write_Enable),
       .o_Mem_Write_Enable(w_Mem_Write_Enable),
       .o_Load_Store_Type(w_Load_Store_Type)

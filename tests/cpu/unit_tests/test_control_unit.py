@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer
-from constants import (
+from cpu.constants import (
     ALU_SEL_ADD,
     ALU_SEL_SUB,
     ALU_SEL_AND,
