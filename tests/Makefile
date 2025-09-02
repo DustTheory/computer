@@ -28,7 +28,13 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_lui_instruction, \
 		cpu.integration_tests.test_auipc_instruction, \
 		cpu.integration_tests.test_jal_instruction, \
-		cpu.integration_tests.test_jalr_instruction"
+		cpu.integration_tests.test_jalr_instruction, \
+		cpu.integration_tests.test_beq_instruction, \
+		cpu.integration_tests.test_bge_instruction, \
+		cpu.integration_tests.test_bgeu_instruction, \
+		cpu.integration_tests.test_blt_instruction, \
+		cpu.integration_tests.test_bltu_instruction, \
+		cpu.integration_tests.test_bne_instruction"
 
 TOPLEVEL = $(CPU_INTEGRATION_TESTS_TOPLEVEL)
 MODULE = $(CPU_INTEGRATION_TESTS_MODULE)
