@@ -23,11 +23,11 @@ localparam FUNC3_ALU_SRL_SRA = 3'b101;
 localparam FUNC3_ALU_OR = 3'b110;
 localparam FUNC3_ALU_AND = 3'b111;
 
-localparam FUNC3_LOAD_LB = 3'b000;
-localparam FUNC3_LOAD_LH = 3'b001;
-localparam FUNC3_LOAD_LW = 3'b010;
-localparam FUNC3_LOAD_LBU = 3'b100;
-localparam FUNC3_LOAD_LHU = 3'b101;
+localparam FUNC3_LS_B = 3'b000;
+localparam FUNC3_LS_H = 3'b001;
+localparam FUNC3_LS_W = 3'b010;
+localparam FUNC3_LS_BU = 3'b100;
+localparam FUNC3_LS_HU = 3'b101;
 
 localparam FUNC3_BRANCH_BEQ = 3'b000;
 localparam FUNC3_BRANCH_BNE = 3'b001;

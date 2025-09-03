@@ -1,12 +1,12 @@
 import cocotb
 from cocotb.triggers import Timer
 from cpu.constants import (
-    CMP_SEL_BEQ,
-    CMP_SEL_BNE,
-    CMP_SEL_BLTU,
-    CMP_SEL_BGEU,
-    CMP_SEL_BLT,
-    CMP_SEL_BGE,
+    CMP_SEL_EQ,
+    CMP_SEL_NE,
+    CMP_SEL_LTU,
+    CMP_SEL_GEU,
+    CMP_SEL_LT,
+    CMP_SEL_GE,
     CMP_SEL_UNKNOWN
 )
 
@@ -33,7 +33,7 @@ async def beq_test(dut):
     for a, b, expected in tests:
         dut.comparator_unit.i_Input_A.value = a
         dut.comparator_unit.i_Input_B.value = b
-        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_BEQ
+        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_EQ
 
         await Timer(wait_ns, units="ns")
 
@@ -61,7 +61,7 @@ async def bne_test(dut):
     for a, b, expected in tests:
         dut.comparator_unit.i_Input_A.value = a
         dut.comparator_unit.i_Input_B.value = b
-        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_BNE
+        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_NE
 
         await Timer(wait_ns, units="ns")
 
@@ -89,7 +89,7 @@ async def bltu_test(dut):
     for a, b, expected in tests:
         dut.comparator_unit.i_Input_A.value = a
         dut.comparator_unit.i_Input_B.value = b
-        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_BLTU
+        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_LTU
 
         await Timer(wait_ns, units="ns")
 
@@ -117,7 +117,7 @@ async def bgeu_test(dut):
     for a, b, expected in tests:
         dut.comparator_unit.i_Input_A.value = a
         dut.comparator_unit.i_Input_B.value = b
-        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_BGEU
+        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_GEU
 
         await Timer(wait_ns, units="ns")
 
@@ -149,7 +149,7 @@ async def blt_test(dut):
     for a, b, expected in tests:
         dut.comparator_unit.i_Input_A.value = a
         dut.comparator_unit.i_Input_B.value = b
-        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_BLT
+        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_LT
 
         await Timer(wait_ns, units="ns")
 
@@ -181,7 +181,7 @@ async def bge_test(dut):
     for a, b, expected in tests:
         dut.comparator_unit.i_Input_A.value = a
         dut.comparator_unit.i_Input_B.value = b
-        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_BGE
+        dut.comparator_unit.i_Compare_Select.value = CMP_SEL_GE
 
         await Timer(wait_ns, units="ns")
 

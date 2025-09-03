@@ -11,12 +11,12 @@ from cpu.constants import (
     ALU_SEL_SRA,
     ALU_SEL_UNKNOWN,
 
-    CMP_SEL_BEQ,
-    CMP_SEL_BNE,
-    CMP_SEL_BLTU,
-    CMP_SEL_BGEU,
-    CMP_SEL_BLT,
-    CMP_SEL_BGE,
+    CMP_SEL_EQ,
+    CMP_SEL_NE,
+    CMP_SEL_LTU,
+    CMP_SEL_GEU,
+    CMP_SEL_LT,
+    CMP_SEL_GE,
     CMP_SEL_UNKNOWN,
 
     IMM_U_TYPE,
@@ -66,11 +66,11 @@ FUNC3_ALU_SRL_SRA = 0b101
 FUNC3_ALU_OR = 0b110
 FUNC3_ALU_AND = 0b111
 
-FUNC3_LOAD_LB = 0b000
-FUNC3_LOAD_LH = 0b001
-FUNC3_LOAD_LW = 0b010
-FUNC3_LOAD_LBU = 0b100
-FUNC3_LOAD_LHU = 0b101
+FUNC3_LS_B = 0b000
+FUNC3_LS_H = 0b001
+FUNC3_LS_W = 0b010
+FUNC3_LS_BU = 0b100
+FUNC3_LS_HU = 0b101
 
 FUNC3_BRANCH_BEQ = 0b000
 FUNC3_BRANCH_BNE = 0b001
@@ -150,12 +150,12 @@ async def test_i_type_alu_instructions(dut):
 @cocotb.test()
 async def test_branch_instructions(dut):
     tests = [
-        ("BEQ", FUNC3_BRANCH_BEQ, CMP_SEL_BEQ),
-        ("BNE", FUNC3_BRANCH_BNE, CMP_SEL_BNE),
-        ("BLT", FUNC3_BRANCH_BLT, CMP_SEL_BLT),
-        ("BGE", FUNC3_BRANCH_BGE, CMP_SEL_BGE),
-        ("BLTU", FUNC3_BRANCH_BLTU, CMP_SEL_BLTU),
-        ("BGEU", FUNC3_BRANCH_BGEU, CMP_SEL_BGEU),
+        ("BEQ", FUNC3_BRANCH_BEQ, CMP_SEL_EQ),
+        ("BNE", FUNC3_BRANCH_BNE, CMP_SEL_NE),
+        ("BLT", FUNC3_BRANCH_BLT, CMP_SEL_LT),
+        ("BGE", FUNC3_BRANCH_BGE, CMP_SEL_GE),
+        ("BLTU", FUNC3_BRANCH_BLTU, CMP_SEL_LTU),
+        ("BGEU", FUNC3_BRANCH_BGEU, CMP_SEL_GEU),
     ]
 
     for name, funct3, expected_cmp in tests:
@@ -182,11 +182,11 @@ async def test_branch_instructions(dut):
 @cocotb.test()
 async def test_i_type_load_instructions(dut):
     tests = [
-        ("LB", FUNC3_LOAD_LB, LS_TYPE_LOAD_BYTE),
-        ("LH", FUNC3_LOAD_LH, LS_TYPE_LOAD_HALF),
-        ("LW", FUNC3_LOAD_LW, LS_TYPE_LOAD_WORD),
-        ("LBU", FUNC3_LOAD_LBU, LS_TYPE_LOAD_BYTE_UNSIGNED),
-        ("LHU", FUNC3_LOAD_LHU, LS_TYPE_LOAD_HALF_UNSIGNED),
+        ("LB", FUNC3_LS_B, LS_TYPE_LOAD_BYTE),
+        ("LH", FUNC3_LS_H, LS_TYPE_LOAD_HALF),
+        ("LW", FUNC3_LS_W, LS_TYPE_LOAD_WORD),
+        ("LBU", FUNC3_LS_BU, LS_TYPE_LOAD_BYTE_UNSIGNED),
+        ("LHU", FUNC3_LS_HU, LS_TYPE_LOAD_HALF_UNSIGNED),
     ]
 
     for name, funct3, expected_ls in tests:

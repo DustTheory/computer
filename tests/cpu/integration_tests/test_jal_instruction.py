@@ -25,10 +25,12 @@ async def test_jal_instruction(dut):
     dut.cpu.r_PC.value = start_address
     dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = jal_instruction
 
-    dut.cpu.i_Reset.value = 0
+
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1
+    await Timer(wait_ns, units="ns")
+    dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"JAL instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"
