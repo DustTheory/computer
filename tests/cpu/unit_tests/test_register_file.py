@@ -10,7 +10,7 @@ async def test_read(dut):
     dut._log.info("Starting read test")
 
     # Initialize registers with known values
-    dut.register_file.registers = [i for i in range(32)]
+    dut.register_file.Registers = [i for i in range(32)]
 
     # Set inputs to zero
     dut.register_file.i_Read_Addr_1.value = 0
@@ -35,7 +35,7 @@ async def test_write(dut):
     dut._log.info("Starting write test")
 
     # Initialize registers with zeros
-    dut.register_file.registers = [0 for _ in range(32)]
+    dut.register_file.Registers = [0 for _ in range(32)]
 
     # Set inputs to zero
     dut.register_file.i_Read_Addr_1.value = 0
@@ -70,7 +70,7 @@ async def test_write_zero_register(dut):
     dut._log.info("Starting write zero register test")
 
     # Initialize registers with known values
-    dut.register_file.registers = [i for i in range(32)]
+    dut.register_file.Registers = [i for i in range(32)]
 
     # Set inputs to zero
     dut.register_file.i_Read_Addr_1.value = 0
@@ -102,7 +102,7 @@ async def test_simultaneous_read_write(dut):
     dut._log.info("Starting simultaneous read/write test")
 
     # Initialize registers with known values
-    dut.register_file.registers = [i for i in range(32)]
+    dut.register_file.Registers = [i for i in range(32)]
 
     # Set inputs to zero
     dut.register_file.i_Read_Addr_1.value = 1
@@ -141,7 +141,7 @@ async def test_no_write_when_disabled(dut):
     dut._log.info("Starting no write when disabled test")
 
     # Initialize registers with known values
-    dut.register_file.registers = [i for i in range(32)]
+    dut.register_file.Registers = [i for i in range(32)]
 
     # Set inputs to zero
     dut.register_file.i_Read_Addr_1.value = 4
