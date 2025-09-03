@@ -42,7 +42,15 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_lhu_instruction, \
 		cpu.integration_tests.test_sb_instruction, \
 		cpu.integration_tests.test_sh_instruction, \
-		cpu.integration_tests.test_sw_instruction"
+		cpu.integration_tests.test_sw_instruction, \
+		cpu.integration_tests.test_add_instruction, \
+		cpu.integration_tests.test_sub_instruction, \
+		cpu.integration_tests.test_and_instruction, \
+		cpu.integration_tests.test_or_instruction, \
+		cpu.integration_tests.test_xor_instruction, \
+		cpu.integration_tests.test_sll_instruction, \
+		cpu.integration_tests.test_srl_instruction, \
+		cpu.integration_tests.test_sra_instruction"
 
 # CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_lb_instruction"
 

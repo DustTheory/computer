@@ -44,3 +44,12 @@ def gen_s_type_instruction(funct3, rs1, rs2, imm):
     instruction |= imm_11_5 << 25
 
     return instruction
+
+def gen_r_type_instruction(opcode, rd, funct3, rs1, rs2, funct7):
+    instruction = opcode
+    instruction |= rd << 7
+    instruction |= funct3 << 12
+    instruction |= rs1 << 15
+    instruction |= rs2 << 20
+    instruction |= funct7 << 25
+    return instruction
