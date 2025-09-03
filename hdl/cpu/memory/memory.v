@@ -14,7 +14,9 @@ module memory #(
 
   reg [7:0] Memory_Array[0:MEMORY_DEPTH-1];
 
-  reg [XLEN-1:0] w_Read_Data;
+  wire [XLEN-1:0] w_Read_Data = {
+    Memory_Array[i_Addr+3], Memory_Array[i_Addr+2], Memory_Array[i_Addr+1], Memory_Array[i_Addr]
+  };
 
   always @(posedge i_Clock) begin
     if (i_Write_Enable) begin
@@ -33,9 +35,6 @@ module memory #(
       end
     end
 
-    w_Read_Data <= {
-      Memory_Array[i_Addr+3], Memory_Array[i_Addr+2], Memory_Array[i_Addr+1], Memory_Array[i_Addr]
-    };
   end
 
   // verilator lint_off WIDTH

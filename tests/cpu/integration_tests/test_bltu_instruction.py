@@ -24,7 +24,7 @@ async def test_bltu_instruction_when_ltu(dut):
     dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = bltu_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
-    dut.cpu.i_Reset.value = 0
+
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1
@@ -46,7 +46,7 @@ async def test_bltu_instruction_when_geu(dut):
     dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = bltu_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
-    dut.cpu.i_Reset.value = 0
+
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1

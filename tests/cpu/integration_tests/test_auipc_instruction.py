@@ -21,10 +21,11 @@ async def test_auipc_instruction(dut):
     dut.cpu.r_PC.value = start_address
     dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = auipc_instruction
 
-    dut.cpu.i_Reset.value = 0
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1
+    await Timer(wait_ns, units="ns")
+    dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
 
     result = dut.cpu.reg_file.Registers[dest_register].value.integer

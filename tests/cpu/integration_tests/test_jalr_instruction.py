@@ -30,10 +30,12 @@ async def test_jalr_instruction(dut):
     dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = jalr_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
-    dut.cpu.i_Reset.value = 0
+
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1
+    await Timer(wait_ns, units="ns")
+    dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"JALR instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"

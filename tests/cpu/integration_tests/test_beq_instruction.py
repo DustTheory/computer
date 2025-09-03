@@ -30,7 +30,7 @@ async def test_beq_instruction_when_equal(dut):
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
-    dut.cpu.i_Reset.value = 0
+
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1
@@ -57,7 +57,7 @@ async def test_beq_instruction_when_not_equal(dut):
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
-    dut.cpu.i_Reset.value = 0
+
     dut.cpu.i_Clock.value = 0
     await Timer(wait_ns, units="ns")
     dut.cpu.i_Clock.value = 1
