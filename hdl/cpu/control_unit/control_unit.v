@@ -203,11 +203,11 @@ module control_unit (
         o_Imm_Select = IMM_I_TYPE;
         o_Reg_Write_Select = REG_WRITE_DMEM;
         case (i_Funct3)
-          FUNC3_LOAD_LB: o_Load_Store_Type = LS_TYPE_LOAD_BYTE;
-          FUNC3_LOAD_LH: o_Load_Store_Type = LS_TYPE_LOAD_HALF;
-          FUNC3_LOAD_LW: o_Load_Store_Type = LS_TYPE_LOAD_WORD;
-          FUNC3_LOAD_LBU: o_Load_Store_Type = LS_TYPE_LOAD_BYTE_UNSIGNED;
-          FUNC3_LOAD_LHU: o_Load_Store_Type = LS_TYPE_LOAD_HALF_UNSIGNED;
+          FUNC3_LS_B: o_Load_Store_Type = LS_TYPE_LOAD_BYTE;
+          FUNC3_LS_H: o_Load_Store_Type = LS_TYPE_LOAD_HALF;
+          FUNC3_LS_W: o_Load_Store_Type = LS_TYPE_LOAD_WORD;
+          FUNC3_LS_BU: o_Load_Store_Type = LS_TYPE_LOAD_BYTE_UNSIGNED;
+          FUNC3_LS_HU: o_Load_Store_Type = LS_TYPE_LOAD_HALF_UNSIGNED;
           default: o_Load_Store_Type = LS_TYPE_NONE;
         endcase
       end
@@ -222,9 +222,9 @@ module control_unit (
         o_Imm_Select = IMM_S_TYPE;
         o_Reg_Write_Select = REG_WRITE_NONE;
         case (i_Funct3)
-          FUNC3_LOAD_LB: o_Load_Store_Type = LS_TYPE_STORE_BYTE;
-          FUNC3_LOAD_LH: o_Load_Store_Type = LS_TYPE_STORE_HALF;
-          FUNC3_LOAD_LW: o_Load_Store_Type = LS_TYPE_STORE_WORD;
+          FUNC3_LS_B: o_Load_Store_Type = LS_TYPE_STORE_BYTE;
+          FUNC3_LS_H: o_Load_Store_Type = LS_TYPE_STORE_HALF;
+          FUNC3_LS_W: o_Load_Store_Type = LS_TYPE_STORE_WORD;
           default: o_Load_Store_Type = LS_TYPE_NONE;
         endcase
       end

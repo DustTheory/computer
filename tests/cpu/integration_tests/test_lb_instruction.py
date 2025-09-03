@@ -6,7 +6,7 @@ from cpu.utils import (
 from cpu.constants import (
     OP_I_TYPE_LOAD,
 
-    FUNC3_LOAD_LB
+    FUNC3_LS_B
 )
 
 wait_ns = 1
@@ -24,12 +24,12 @@ async def test_lb_instruction_when_equal(dut):
     offset = 5
     mem_address = rs1_value + offset
     
-    lb_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LOAD_LB, rs1, offset)
+    lb_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_B, rs1, offset)
 
     dut.cpu.r_PC.value = start_address
     dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = lb_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.mem.Memory_Array[mem_address] = mem_value
+    dut.cpu.mem.Memory_Array[mem_address].value = mem_value
 
 
     dut.cpu.i_Clock.value = 0

@@ -66,11 +66,11 @@ FUNC3_ALU_SRL_SRA = 0b101
 FUNC3_ALU_OR = 0b110
 FUNC3_ALU_AND = 0b111
 
-FUNC3_LOAD_LB = 0b000
-FUNC3_LOAD_LH = 0b001
-FUNC3_LOAD_LW = 0b010
-FUNC3_LOAD_LBU = 0b100
-FUNC3_LOAD_LHU = 0b101
+FUNC3_LS_B = 0b000
+FUNC3_LS_H = 0b001
+FUNC3_LS_W = 0b010
+FUNC3_LS_BU = 0b100
+FUNC3_LS_HU = 0b101
 
 FUNC3_BRANCH_BEQ = 0b000
 FUNC3_BRANCH_BNE = 0b001
@@ -182,11 +182,11 @@ async def test_branch_instructions(dut):
 @cocotb.test()
 async def test_i_type_load_instructions(dut):
     tests = [
-        ("LB", FUNC3_LOAD_LB, LS_TYPE_LOAD_BYTE),
-        ("LH", FUNC3_LOAD_LH, LS_TYPE_LOAD_HALF),
-        ("LW", FUNC3_LOAD_LW, LS_TYPE_LOAD_WORD),
-        ("LBU", FUNC3_LOAD_LBU, LS_TYPE_LOAD_BYTE_UNSIGNED),
-        ("LHU", FUNC3_LOAD_LHU, LS_TYPE_LOAD_HALF_UNSIGNED),
+        ("LB", FUNC3_LS_B, LS_TYPE_LOAD_BYTE),
+        ("LH", FUNC3_LS_H, LS_TYPE_LOAD_HALF),
+        ("LW", FUNC3_LS_W, LS_TYPE_LOAD_WORD),
+        ("LBU", FUNC3_LS_BU, LS_TYPE_LOAD_BYTE_UNSIGNED),
+        ("LHU", FUNC3_LS_HU, LS_TYPE_LOAD_HALF_UNSIGNED),
     ]
 
     for name, funct3, expected_ls in tests:

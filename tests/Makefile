@@ -39,7 +39,10 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_lh_instruction, \
 		cpu.integration_tests.test_lw_instruction, \
 		cpu.integration_tests.test_lbu_instruction, \
-		cpu.integration_tests.test_lhu_instruction"
+		cpu.integration_tests.test_lhu_instruction, \
+		cpu.integration_tests.test_sb_instruction, \
+		cpu.integration_tests.test_sh_instruction, \
+		cpu.integration_tests.test_sw_instruction"
 
 # CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_lb_instruction"
 
