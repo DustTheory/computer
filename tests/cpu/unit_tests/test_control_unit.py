@@ -11,12 +11,12 @@ from cpu.constants import (
     ALU_SEL_SRA,
     ALU_SEL_UNKNOWN,
 
-    CMP_SEL_BEQ,
-    CMP_SEL_BNE,
-    CMP_SEL_BLTU,
-    CMP_SEL_BGEU,
-    CMP_SEL_BLT,
-    CMP_SEL_BGE,
+    CMP_SEL_EQ,
+    CMP_SEL_NE,
+    CMP_SEL_LTU,
+    CMP_SEL_GEU,
+    CMP_SEL_LT,
+    CMP_SEL_GE,
     CMP_SEL_UNKNOWN,
 
     IMM_U_TYPE,
@@ -150,12 +150,12 @@ async def test_i_type_alu_instructions(dut):
 @cocotb.test()
 async def test_branch_instructions(dut):
     tests = [
-        ("BEQ", FUNC3_BRANCH_BEQ, CMP_SEL_BEQ),
-        ("BNE", FUNC3_BRANCH_BNE, CMP_SEL_BNE),
-        ("BLT", FUNC3_BRANCH_BLT, CMP_SEL_BLT),
-        ("BGE", FUNC3_BRANCH_BGE, CMP_SEL_BGE),
-        ("BLTU", FUNC3_BRANCH_BLTU, CMP_SEL_BLTU),
-        ("BGEU", FUNC3_BRANCH_BGEU, CMP_SEL_BGEU),
+        ("BEQ", FUNC3_BRANCH_BEQ, CMP_SEL_EQ),
+        ("BNE", FUNC3_BRANCH_BNE, CMP_SEL_NE),
+        ("BLT", FUNC3_BRANCH_BLT, CMP_SEL_LT),
+        ("BGE", FUNC3_BRANCH_BGE, CMP_SEL_GE),
+        ("BLTU", FUNC3_BRANCH_BLTU, CMP_SEL_LTU),
+        ("BGEU", FUNC3_BRANCH_BGEU, CMP_SEL_GEU),
     ]
 
     for name, funct3, expected_cmp in tests:

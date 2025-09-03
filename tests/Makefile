@@ -50,9 +50,18 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_xor_instruction, \
 		cpu.integration_tests.test_sll_instruction, \
 		cpu.integration_tests.test_srl_instruction, \
-		cpu.integration_tests.test_sra_instruction"
-
-# CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_lb_instruction"
+		cpu.integration_tests.test_sra_instruction, \
+		cpu.integration_tests.test_slt_instruction, \
+		cpu.integration_tests.test_sltu_instruction, \
+		cpu.integration_tests.test_addi_instruction, \
+		cpu.integration_tests.test_andi_instruction, \
+		cpu.integration_tests.test_ori_instruction, \
+		cpu.integration_tests.test_xori_instruction, \
+		cpu.integration_tests.test_slli_instruction, \
+		cpu.integration_tests.test_srli_instruction, \
+		cpu.integration_tests.test_srai_instruction, \
+		cpu.integration_tests.test_slti_instruction, \
+		cpu.integration_tests.test_sltiu_instruction"
 
 TOPLEVEL = $(CPU_INTEGRATION_TESTS_TOPLEVEL)
 MODULE = $(CPU_INTEGRATION_TESTS_MODULE)

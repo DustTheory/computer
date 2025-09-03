@@ -46,13 +46,13 @@ module control_unit (
           end
           FUNC3_ALU_SLT: begin
             o_Alu_Select = ALU_SEL_UNKNOWN;
-            o_Cmp_Select = CMP_SEL_BLT;
+            o_Cmp_Select = CMP_SEL_LT;
             o_Port_B_Select = 1'b0;
             o_Reg_Write_Select = REG_WRITE_CU;
           end
           FUNC3_ALU_SLTU: begin
             o_Alu_Select = ALU_SEL_UNKNOWN;
-            o_Cmp_Select = CMP_SEL_BLTU;
+            o_Cmp_Select = CMP_SEL_LTU;
             o_Port_B_Select = 1'b0;
             o_Reg_Write_Select = REG_WRITE_CU;
           end
@@ -145,12 +145,14 @@ module control_unit (
           end
           FUNC3_ALU_SLT: begin
             o_Alu_Select = ALU_SEL_UNKNOWN;
-            o_Cmp_Select = CMP_SEL_BLT;
+            o_Cmp_Select = CMP_SEL_LT;
+            o_Port_B_Select = 1'b1;
             o_Reg_Write_Select = REG_WRITE_CU;
           end
           FUNC3_ALU_SLTU: begin
             o_Alu_Select = ALU_SEL_UNKNOWN;
-            o_Cmp_Select = CMP_SEL_BLTU;
+            o_Cmp_Select = CMP_SEL_LTU;
+            o_Port_B_Select = 1'b1;
             o_Reg_Write_Select = REG_WRITE_CU;
           end
           FUNC3_ALU_XOR: begin
@@ -239,12 +241,12 @@ module control_unit (
         o_Reg_Write_Select = REG_WRITE_NONE;
         o_Load_Store_Type = LS_TYPE_NONE;
         case (i_Funct3)
-          FUNC3_BRANCH_BEQ: o_Cmp_Select = CMP_SEL_BEQ;
-          FUNC3_BRANCH_BNE: o_Cmp_Select = CMP_SEL_BNE;
-          FUNC3_BRANCH_BLT: o_Cmp_Select = CMP_SEL_BLT;
-          FUNC3_BRANCH_BGE: o_Cmp_Select = CMP_SEL_BGE;
-          FUNC3_BRANCH_BLTU: o_Cmp_Select = CMP_SEL_BLTU;
-          FUNC3_BRANCH_BGEU: o_Cmp_Select = CMP_SEL_BGEU;
+          FUNC3_BRANCH_BEQ: o_Cmp_Select = CMP_SEL_EQ;
+          FUNC3_BRANCH_BNE: o_Cmp_Select = CMP_SEL_NE;
+          FUNC3_BRANCH_BLT: o_Cmp_Select = CMP_SEL_LT;
+          FUNC3_BRANCH_BGE: o_Cmp_Select = CMP_SEL_GE;
+          FUNC3_BRANCH_BLTU: o_Cmp_Select = CMP_SEL_LTU;
+          FUNC3_BRANCH_BGEU: o_Cmp_Select = CMP_SEL_GEU;
           default: o_Cmp_Select = CMP_SEL_UNKNOWN;
         endcase
       end

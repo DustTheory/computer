@@ -7,12 +7,12 @@ IMM_S_TYPE = 4
 IMM_UNKNOWN_TYPE = 5
 
 # Constants for comparator operation select values
-CMP_SEL_BEQ = 0
-CMP_SEL_BNE = 1
-CMP_SEL_BLTU = 2
-CMP_SEL_BGEU = 3
-CMP_SEL_BLT = 4
-CMP_SEL_BGE = 5
+CMP_SEL_EQ = 0
+CMP_SEL_NE = 1
+CMP_SEL_LTU = 2
+CMP_SEL_GEU = 3
+CMP_SEL_LT = 4
+CMP_SEL_GE = 5
 CMP_SEL_UNKNOWN = 6
 
 # Constants for ALU operation select values
