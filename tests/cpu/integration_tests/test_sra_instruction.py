@@ -21,7 +21,7 @@ async def test_sra_instruction(dut):
     rd = 3
 
     for rs1_value, rs2_value, expected_result in tests:
-        instruction = gen_r_type_instruction(OP_R_TYPE, rd, FUNC3_ALU_SRL_SRA, rs1, rs2, 0b0100000)
+        instruction = gen_r_type_instruction(rd, FUNC3_ALU_SRL_SRA, rs1, rs2, 0b0100000)
 
         dut.cpu.r_PC.value = start_address
         dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = instruction

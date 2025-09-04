@@ -56,7 +56,8 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_srli_instruction, \
 		cpu.integration_tests.test_srai_instruction, \
 		cpu.integration_tests.test_slti_instruction, \
-		cpu.integration_tests.test_sltiu_instruction"
+		cpu.integration_tests.test_sltiu_instruction, \
+		cpu.integration_tests.test_program"
 
 TEST_TYPE ?= unit  
 

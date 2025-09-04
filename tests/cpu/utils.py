@@ -1,6 +1,7 @@
 from cpu.constants import (
     OP_B_TYPE,
     OP_S_TYPE,
+    OP_R_TYPE,
 )
 
 def gen_i_type_instruction(opcode, rd, funct3, rs1, imm):
@@ -45,8 +46,8 @@ def gen_s_type_instruction(funct3, rs1, rs2, imm):
 
     return instruction
 
-def gen_r_type_instruction(opcode, rd, funct3, rs1, rs2, funct7):
-    instruction = opcode
+def gen_r_type_instruction(rd, funct3, rs1, rs2, funct7):
+    instruction = OP_R_TYPE
     instruction |= rd << 7
     instruction |= funct3 << 12
     instruction |= rs1 << 15
