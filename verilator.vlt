@@ -1,0 +1,1 @@
+lint_off -file "*/instruction_memory_axi.v" 

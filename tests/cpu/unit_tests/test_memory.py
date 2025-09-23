@@ -1,5 +1,7 @@
 import cocotb
-from cocotb.triggers import Timer
+from cocotb.triggers import ClockCycles, Timer
+from cocotb.clock import Clock
+
 from cpu.constants import (
     LS_TYPE_LOAD_WORD,
     LS_TYPE_LOAD_HALF,
@@ -29,10 +31,12 @@ async def test_load_byte_unsigned(dut):
 
     for i in range(4):
         dut.memory.i_Addr.value = i
+
         dut.memory.i_Clock.value = 1
         await Timer(wait_ns, units="ns")
         dut.memory.i_Clock.value = 0
         await Timer(wait_ns, units="ns")
+        
         value = dut.memory.o_Data.value.integer
         expected = data[i]
         assert value == expected, f"Load byte failed at address {i}: got {value:#04x}, expected {expected:#04x}"
