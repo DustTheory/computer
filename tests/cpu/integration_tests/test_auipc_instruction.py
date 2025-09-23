@@ -1,5 +1,7 @@
 import cocotb
-from cocotb.triggers import Timer
+from cocotb.triggers import RisingEdge, ClockCycles
+from cocotb.clock import Clock
+
 from cpu.constants import (
     OP_U_TYPE_AUIPC,
 )
@@ -19,14 +21,17 @@ async def test_auipc_instruction(dut):
     auipc_instruction |= magic_value << 12 # immediate value
 
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.Memory_Array[start_address>>2].value = auipc_instruction
+    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = auipc_instruction
 
-    dut.cpu.i_Clock.value = 0
-    await Timer(wait_ns, units="ns")
-    dut.cpu.i_Clock.value = 1
-    await Timer(wait_ns, units="ns")
-    dut.cpu.i_Clock.value = 0
-    await Timer(wait_ns, units="ns")
+    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    cocotb.start_soon(clock.start())
+
+    dut.cpu.i_Reset.value = 1
+    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.cpu.i_Reset.value = 0
+    await ClockCycles(dut.cpu.i_Clock, 1)
+
+    await ClockCycles(dut.cpu.i_Clock, 5)
 
     result = dut.cpu.reg_file.Registers[dest_register].value.integer
     expected = (magic_value << 12) + start_address

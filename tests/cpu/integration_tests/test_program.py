@@ -1,5 +1,6 @@
 import cocotb
-from cocotb.triggers import Timer
+from cocotb.triggers import ClockCycles
+from cocotb.clock import Clock
 
 from cpu.constants import (
     OP_I_TYPE_ALU,
@@ -36,24 +37,22 @@ async def test_sum_loop(dut):
     dut.cpu.r_PC.value = 0
     # Load instructions into instruction memory
     for i, instr in enumerate(instructions):
-        dut.cpu.instruction_memory.Memory_Array[i].value = instr
+        dut.cpu.instruction_memory.ram.mem[i].value = instr
 
     haltInstructions = 100
     endAddress = len(instructions) * 4
 
+    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    cocotb.start_soon(clock.start())
+
+    dut.cpu.i_Reset.value = 1
+    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.cpu.i_Reset.value = 0
+
     while dut.cpu.r_PC.value.integer < endAddress and haltInstructions > 0:
-        dut.cpu.i_Clock.value = 0
-        await Timer(wait_ns, units="ns")
-        dut.cpu.i_Clock.value = 1
-        await Timer(wait_ns, units="ns")
 
-        dut._log.info(dut.cpu.reg_file.Registers[1].value.integer) 
-        dut._log.info(dut.cpu.reg_file.Registers[2].value.integer) 
-
+        await ClockCycles(dut.cpu.i_Clock, 4)
         haltInstructions -= 1
-
-    dut._log.info(dut.cpu.reg_file.Registers[1].value.integer) 
-    dut._log.info(dut.cpu.reg_file.Registers[2].value.integer) 
 
     # After executing the program, $v0 should contain the sum of first 10 natural numbers
     expected_sum = sum(range(1, 11))  # 55
