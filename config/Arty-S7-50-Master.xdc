@@ -66,13 +66,13 @@ set_property -dict { PACKAGE_PIN E18   IOSTANDARD LVCMOS33 } [get_ports { o_Writ
 #set_property -dict { PACKAGE_PIN V14   IOSTANDARD LVCMOS33 } [get_ports { jc[7] }]; #IO_L20P_T3_A08_D24_14 Sch=jc10/ck_io[34]
 
 ## Pmod Header JD
-set_property -dict { PACKAGE_PIN V15   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[2] }]; #IO_L20N_T3_A07_D23_14 Sch=jd1/ck_io[33]
-set_property -dict { PACKAGE_PIN U12   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[1] }]; #IO_L21P_T3_DQS_14 Sch=jd2/ck_io[32]
-set_property -dict { PACKAGE_PIN V13   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[0] }]; #IO_L21N_T3_DQS_A06_D22_14 Sch=jd3/ck_io[31]
+set_property -dict { PACKAGE_PIN V15   IOSTANDARD LVCMOS33 } [get_ports { o_Vertical_Sync }]; #IO_L20N_T3_A07_D23_14 Sch=jd1/ck_io[33]
+set_property -dict { PACKAGE_PIN U12   IOSTANDARD LVCMOS33 } [get_ports { o_Horizontal_Sync }]; #IO_L21P_T3_DQS_14 Sch=jd2/ck_io[32]
+# set_property -dict { PACKAGE_PIN V13   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[0] }]; #IO_L21N_T3_DQS_A06_D22_14 Sch=jd3/ck_io[31]
 #set_property -dict { PACKAGE_PIN T12   IOSTANDARD LVCMOS33 } [get_ports { jd[3] }]; #IO_L22P_T3_A05_D21_14 Sch=jd4/ck_io[30]
-set_property -dict { PACKAGE_PIN T13   IOSTANDARD LVCMOS33 } [get_ports { o_Vertical_Sync }]; #IO_L22N_T3_A04_D20_14 Sch=jd7/ck_io[29]
-set_property -dict { PACKAGE_PIN R11   IOSTANDARD LVCMOS33 } [get_ports { o_Horizontal_Sync }]; #IO_L23P_T3_A03_D19_14 Sch=jd8/ck_io[28]
-#set_property -dict { PACKAGE_PIN T11   IOSTANDARD LVCMOS33 } [get_ports { jd[6] }]; #IO_L23N_T3_A02_D18_14 Sch=jd9/ck_io[27]
+set_property -dict { PACKAGE_PIN T13   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[0] }]; #IO_L22N_T3_A04_D20_14 Sch=jd7/ck_io[29]
+set_property -dict { PACKAGE_PIN R11   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[1] }]; #IO_L23P_T3_A03_D19_14 Sch=jd8/ck_io[28]
+set_property -dict { PACKAGE_PIN T11   IOSTANDARD LVCMOS33 } [get_ports { o_RGB[2] }]; #IO_L23N_T3_A02_D18_14 Sch=jd9/ck_io[27]
 #set_property -dict { PACKAGE_PIN U11   IOSTANDARD LVCMOS33 } [get_ports { jd[7] }]; #IO_L24P_T3_A01_D17_14 Sch=jd10/ck_io[26]
 
 ## USB-UART Interface

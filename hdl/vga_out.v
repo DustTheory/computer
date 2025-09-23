@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module vga_out #(
-    parameter BITS_PER_PIXEL = 3,
+    parameter BITS_PER_PIXEL = 4,
     parameter FRAMEBUFFER_DEPTH = 640 * 480
 ) (
     input i_Clock,
@@ -73,7 +73,7 @@ module vga_out #(
   end
 
   assign o_Fb_Read_Addr = (r_V_Counter * VISIBLE_H[15:0]) + {16'd0, r_H_Counter};
-  assign o_RGB = (w_Visible) ? i_Fb_Read_Data : 3'b000;
+  assign o_RGB = (w_Visible) ? i_Fb_Read_Data : 4'b000;
   assign o_Horizontal_Sync = ~(r_H_State == STATE_SYNC);  // Invert for active low
   assign o_Vertical_Sync = ~(r_V_State == STATE_SYNC);  // Invert for active low
 

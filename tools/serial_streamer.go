@@ -45,7 +45,7 @@ func main() {
 			currentBounds.Dx(), currentBounds.Dy(), targetWidth, targetHeight)
 	}
 
-	const serialPortName = "/dev/ttyUSB0"
+	const serialPortName = "/dev/ttyUSB1"
 	const baudRate = 115200
 
 	mode := &serial.Mode{
@@ -75,20 +75,11 @@ func main() {
 			for x := 0; x < targetWidth; x++ {
 				r, g, b, _ := img.At(x, y).RGBA()
 
-				var r_bit byte = 0
-				if r > 32767 {
-					r_bit = 1
+				packet[y*targetWidth+x+1] = byte((r + g*2 + b) / 16384)
+				if packet[y*targetWidth+x+1] > 15 {
+					fmt.Printf("Warning: Pixel value %d at (%d,%d) exceeds 4-bit max. Clamping to 15.\n", packet[y*targetWidth+x+1], x, y)
+					packet[y*targetWidth+x+1] = 15
 				}
-				var g_bit byte = 0
-				if g > 32767 {
-					g_bit = 1
-				}
-				var b_bit byte = 0
-				if b > 32767 {
-					b_bit = 1
-				}
-
-				packet[y*targetWidth+x+1] = (r_bit << 2) | (g_bit << 1) | b_bit
 			}
 		}
 	} else {
