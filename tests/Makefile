@@ -59,6 +59,10 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_sltiu_instruction, \
 		cpu.integration_tests.test_program"
 
+AXI_TESTS_TOPLEVEL = axi_tests_harness
+AXI_TESTS_MODULE = "axi.test_instruction_memory_axi, \
+					axi.test_memory_axi"
+
 TEST_TYPE ?= unit  
 
 ifeq ($(TEST_TYPE),all)
@@ -80,6 +84,12 @@ ifeq ($(TEST_TYPE),integration)
   TOPLEVEL = $(CPU_INTEGRATION_TESTS_TOPLEVEL)
   MODULE = $(CPU_INTEGRATION_TESTS_MODULE)
   VERILOG_SOURCES += ./cpu/integration_tests/cpu_integration_tests_harness.v
+endif
+
+ifeq ($(TEST_TYPE),axi) 
+  TOPLEVEL = $(AXI_TESTS_TOPLEVEL)
+  MODULE = $(AXI_TESTS_MODULE)
+  VERILOG_SOURCES += ./axi/harness.v
 endif
 
 export SIM TOPLEVEL_LANG VERILOG_SOURCES TOPLEVEL MODULE EXTRA_ARGS PYTHONPATH
