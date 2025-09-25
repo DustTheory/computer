@@ -42,7 +42,9 @@ module memory_axi (
               r_State <= READ_SUBMITTING;
             end
             LS_TYPE_STORE_WORD, LS_TYPE_STORE_HALF, LS_TYPE_STORE_BYTE: begin
-              r_State <= WRITE_SUBMITTING;
+              if(i_Write_Enable) begin
+                r_State <= WRITE_SUBMITTING;
+              end
             end
             default: begin
               // Nothing?

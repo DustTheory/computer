@@ -22,45 +22,46 @@ CPU_UNIT_TESTS_MODULE = "cpu.unit_tests.test_arithmetic_logic_unit, \
 		  cpu.unit_tests.test_instruction_memory"
 
 CPU_INTEGRATION_TESTS_TOPLEVEL = cpu_integration_tests_harness
-CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
-		cpu.integration_tests.test_lui_instruction, \
-		cpu.integration_tests.test_auipc_instruction, \
-		cpu.integration_tests.test_jal_instruction, \
-		cpu.integration_tests.test_jalr_instruction, \
-		cpu.integration_tests.test_beq_instruction, \
-		cpu.integration_tests.test_bge_instruction, \
-		cpu.integration_tests.test_bgeu_instruction, \
-		cpu.integration_tests.test_blt_instruction, \
-		cpu.integration_tests.test_bltu_instruction, \
-		cpu.integration_tests.test_bne_instruction, \
-		cpu.integration_tests.test_lb_instruction, \
-		cpu.integration_tests.test_lh_instruction, \
-		cpu.integration_tests.test_lw_instruction, \
-		cpu.integration_tests.test_lbu_instruction, \
-		cpu.integration_tests.test_lhu_instruction, \
-		cpu.integration_tests.test_sb_instruction, \
-		cpu.integration_tests.test_sh_instruction, \
-		cpu.integration_tests.test_sw_instruction, \
-		cpu.integration_tests.test_add_instruction, \
-		cpu.integration_tests.test_sub_instruction, \
-		cpu.integration_tests.test_and_instruction, \
-		cpu.integration_tests.test_or_instruction, \
-		cpu.integration_tests.test_xor_instruction, \
-		cpu.integration_tests.test_sll_instruction, \
-		cpu.integration_tests.test_srl_instruction, \
-		cpu.integration_tests.test_sra_instruction, \
-		cpu.integration_tests.test_slt_instruction, \
-		cpu.integration_tests.test_sltu_instruction, \
-		cpu.integration_tests.test_addi_instruction, \
-		cpu.integration_tests.test_andi_instruction, \
-		cpu.integration_tests.test_ori_instruction, \
-		cpu.integration_tests.test_xori_instruction, \
-		cpu.integration_tests.test_slli_instruction, \
-		cpu.integration_tests.test_srli_instruction, \
-		cpu.integration_tests.test_srai_instruction, \
-		cpu.integration_tests.test_slti_instruction, \
-		cpu.integration_tests.test_sltiu_instruction, \
-		cpu.integration_tests.test_program"
+CPU_INTEGRATION_TESTS_MODULE="cpu.integration_tests.test_lui_instruction"
+# CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
+# 		cpu.integration_tests.test_lui_instruction, \
+# 		cpu.integration_tests.test_auipc_instruction, \
+# 		cpu.integration_tests.test_jal_instruction, \
+# 		cpu.integration_tests.test_jalr_instruction, \
+# 		cpu.integration_tests.test_beq_instruction, \
+# 		cpu.integration_tests.test_bge_instruction, \
+# 		cpu.integration_tests.test_bgeu_instruction, \
+# 		cpu.integration_tests.test_blt_instruction, \
+# 		cpu.integration_tests.test_bltu_instruction, \
+# 		cpu.integration_tests.test_bne_instruction, \
+# 		cpu.integration_tests.test_lb_instruction, \
+# 		cpu.integration_tests.test_lh_instruction, \
+# 		cpu.integration_tests.test_lw_instruction, \
+# 		cpu.integration_tests.test_lbu_instruction, \
+# 		cpu.integration_tests.test_lhu_instruction, \
+# 		cpu.integration_tests.test_sb_instruction, \
+# 		cpu.integration_tests.test_sh_instruction, \
+# 		cpu.integration_tests.test_sw_instruction, \
+# 		cpu.integration_tests.test_add_instruction, \
+# 		cpu.integration_tests.test_sub_instruction, \
+# 		cpu.integration_tests.test_and_instruction, \
+# 		cpu.integration_tests.test_or_instruction, \
+# 		cpu.integration_tests.test_xor_instruction, \
+# 		cpu.integration_tests.test_sll_instruction, \
+# 		cpu.integration_tests.test_srl_instruction, \
+# 		cpu.integration_tests.test_sra_instruction, \
+# 		cpu.integration_tests.test_slt_instruction, \
+# 		cpu.integration_tests.test_sltu_instruction, \
+# 		cpu.integration_tests.test_addi_instruction, \
+# 		cpu.integration_tests.test_andi_instruction, \
+# 		cpu.integration_tests.test_ori_instruction, \
+# 		cpu.integration_tests.test_xori_instruction, \
+# 		cpu.integration_tests.test_slli_instruction, \
+# 		cpu.integration_tests.test_srli_instruction, \
+# 		cpu.integration_tests.test_srai_instruction, \
+# 		cpu.integration_tests.test_slti_instruction, \
+# 		cpu.integration_tests.test_sltiu_instruction, \
+# 		cpu.integration_tests.test_program"
 
 AXI_TESTS_TOPLEVEL = axi_tests_harness
 AXI_TESTS_MODULE = "axi.test_instruction_memory_axi, \

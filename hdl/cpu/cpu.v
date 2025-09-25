@@ -7,7 +7,10 @@ module cpu (
 );
 
   wire w_Instruction_Valid;
-  wire w_Stall = !w_Instruction_Valid;
+  wire w_Memory_Ready;
+  wire w_Memory_Data_Valid;
+  wire w_Stall = !w_Instruction_Valid || !w_Memory_Ready;
+
   reg [XLEN-1:0] r_PC;  // Program Counter
   wire [XLEN-1:0] w_Instruction;
   wire [XLEN-1:0] w_Immediate;
@@ -49,7 +52,7 @@ module cpu (
   reg [XLEN-1:0] w_Reg_Write_data;
 
   always @* begin
-    if (!w_Stall) begin
+    // if (!w_Stall) begin
       case (w_Reg_Write_Select)
         REG_WRITE_ALU: w_Reg_Write_data = w_Alu_Result;
         REG_WRITE_CU: w_Reg_Write_data = {31'b0, w_Compare_Result};
@@ -58,9 +61,9 @@ module cpu (
         REG_WRITE_DMEM: w_Reg_Write_data = w_Dmem_Data;
         default: w_Reg_Write_data = 0;  // Default case
       endcase
-    end else begin
-      w_Reg_Write_data = 0;
-    end
+    // end else begin
+    //   w_Reg_Write_data = 0;
+    // end
   end
 
 
@@ -87,7 +90,7 @@ module cpu (
       .i_Read_Addr_2(w_Rs_2),
       .i_Write_Addr(w_Instruction[11:7]),
       .i_Write_Data(w_Reg_Write_data),
-      .i_Write_Enable(w_Reg_Write_Enable),
+      .i_Write_Enable(w_Reg_Write_Enable && w_Memory_Data_Valid),
       .o_Read_Data_1(w_Reg_Source_1),
       .o_Read_Data_2(w_Reg_Source_2)
   );
@@ -125,17 +128,29 @@ module cpu (
       .o_Instruction_Valid(w_Instruction_Valid)
   );
 
-  memory #(
-      .MEMORY_DEPTH(1024)
-  ) mem (
-      .i_Enable(!w_Stall),
+ memory_axi mem (
+      .i_Reset(i_Reset),
       .i_Clock(i_Clock),
       .i_Load_Store_Type(w_Load_Store_Type),
       .i_Write_Enable(w_Mem_Write_Enable),
       .i_Addr(w_Alu_Result),
       .i_Data(w_Reg_Source_2),
-      .o_Data(w_Dmem_Data)
+      .o_Data(w_Dmem_Data),
+      .o_Ready(w_Memory_Ready),
+      .o_Data_Valid(w_Memory_Data_Valid)
   );
+
+  // memory #(
+  //     .MEMORY_DEPTH(1024)
+  // ) mem (
+  //     .i_Enable(!w_Stall),
+  //     .i_Clock(i_Clock),
+  //     .i_Load_Store_Type(w_Load_Store_Type),
+  //     .i_Write_Enable(w_Mem_Write_Enable),
+  //     .i_Addr(w_Alu_Result),
+  //     .i_Data(w_Reg_Source_2),
+  //     .o_Data(w_Dmem_Data)
+  // );
 
   always @(posedge i_Clock, posedge i_Reset) begin
     if (!w_Stall) begin

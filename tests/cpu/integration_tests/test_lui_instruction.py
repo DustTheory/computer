@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import ClockCycles, RisingEdge, Timer
 from cocotb.clock import Clock
 
 from cpu.constants import (
@@ -26,7 +26,21 @@ async def test_lui_instruction(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    # await RisingEdge(dut.cpu.mem.o_Data_Valid)
+    # await ClockCycles(dut.cpu.i_Clock, 5)
+
+    for clock_cnt in range(10):
+        await ClockCycles(dut.cpu.i_Clock, 1)
+
+        dut._log.info(f"Cycle {clock_cnt}")
+        dut._log.info(f"  State: {dut.cpu.mem.r_State.value}")
+        dut._log.info(f"  ARREADY: {dut.cpu.mem.w_axil_arready.value}")
+        dut._log.info(f"  RVALID: {dut.cpu.mem.w_axil_rvalid.value}")
+        dut._log.info(f"  RDATA: {dut.cpu.mem.w_axil_rdata.value}")
+        dut._log.info(f"  Data Valid: {dut.cpu.mem.o_Data_Valid.value}")
+        dut._log.info(f"  Data: {dut.cpu.mem.o_Data.value}")
+        if dut.cpu.mem.o_Data_Valid.value:
+            break
     
     result = dut.cpu.reg_file.Registers[1].value.integer
     expected = 0x12345000
