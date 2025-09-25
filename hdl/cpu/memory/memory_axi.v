@@ -9,17 +9,8 @@ module memory_axi (
     input [XLEN-1:0] i_Addr,
     input [XLEN-1:0] i_Data,
     output reg [XLEN-1:0] o_Data,
-    output reg o_Ready,  // Ready for next operation (r/w)
-    output o_Data_Valid
+    output [2:0] o_State
 );
-
-  localparam IDLE = 3'b000;
-  localparam READ_SUBMITTING = 3'b001;
-  localparam READ_AWAITING = 3'b010;
-  localparam READ_SUCCESS = 3'b011;
-  localparam WRITE_SUBMITTING = 3'b100;
-  localparam WRITE_AWAITING = 3'b101;
-  localparam WRITE_SUCCESS = 3'b110;
 
   wire w_axil_arready;
   wire w_axil_rvalid;
@@ -42,7 +33,7 @@ module memory_axi (
               r_State <= READ_SUBMITTING;
             end
             LS_TYPE_STORE_WORD, LS_TYPE_STORE_HALF, LS_TYPE_STORE_BYTE: begin
-              if(i_Write_Enable) begin
+              if (i_Write_Enable) begin
                 r_State <= WRITE_SUBMITTING;
               end
             end
@@ -86,9 +77,6 @@ module memory_axi (
 
   // verilator lint_off WIDTH
   always @* begin
-    o_Data_Valid = (r_State == READ_SUCCESS);
-    o_Ready = (r_State == IDLE);
-
     case (i_Load_Store_Type)
       LS_TYPE_LOAD_WORD: o_Data = w_axil_rdata;
       LS_TYPE_LOAD_HALF: o_Data = $signed({w_axil_rdata[15:0]});
@@ -123,5 +111,6 @@ module memory_axi (
   );
   // verilator lint_off PINMISSING
 
+  assign o_State = r_State;
 
 endmodule

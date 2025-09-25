@@ -29,18 +29,28 @@ async def test_lui_instruction(dut):
     # await RisingEdge(dut.cpu.mem.o_Data_Valid)
     # await ClockCycles(dut.cpu.i_Clock, 5)
 
-    for clock_cnt in range(10):
-        await ClockCycles(dut.cpu.i_Clock, 1)
-
+    for clock_cnt in range(15):
         dut._log.info(f"Cycle {clock_cnt}")
-        dut._log.info(f"  State: {dut.cpu.mem.r_State.value}")
+        dut._log.info(f"  Instruction valid: {dut.cpu.w_Instruction_Valid.value}")
+        dut._log.info(f"  Memory state: {dut.cpu.w_Memory_State.value}")
+
+        dut._log.info(f"##LS Type: {dut.cpu.w_Load_Store_Type.value}")
+        dut._log.info(f"##Write enable: {dut.cpu.w_Mem_Write_Enable.value}")
+        dut._log.info(f"##Addr: {dut.cpu.w_Alu_Result.value}")
+        dut._log.info(f"##Data in: {dut.cpu.w_Reg_Source_2.value}")
+
+        dut._log.info(f"  LS Type: {dut.cpu.mem.i_Load_Store_Type.value}")
+        dut._log.info(f"  Write enable: {dut.cpu.mem.i_Write_Enable.value}")
+        dut._log.info(f"  Addr: {dut.cpu.mem.i_Addr.value}")
+        dut._log.info(f"  Data in: {dut.cpu.mem.i_Data.value}")
         dut._log.info(f"  ARREADY: {dut.cpu.mem.w_axil_arready.value}")
         dut._log.info(f"  RVALID: {dut.cpu.mem.w_axil_rvalid.value}")
         dut._log.info(f"  RDATA: {dut.cpu.mem.w_axil_rdata.value}")
-        dut._log.info(f"  Data Valid: {dut.cpu.mem.o_Data_Valid.value}")
         dut._log.info(f"  Data: {dut.cpu.mem.o_Data.value}")
-        if dut.cpu.mem.o_Data_Valid.value:
-            break
+
+        await ClockCycles(dut.cpu.i_Clock, 1)
+
+      
     
     result = dut.cpu.reg_file.Registers[1].value.integer
     expected = 0x12345000

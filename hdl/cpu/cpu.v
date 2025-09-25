@@ -7,9 +7,6 @@ module cpu (
 );
 
   wire w_Instruction_Valid;
-  wire w_Memory_Ready;
-  wire w_Memory_Data_Valid;
-  wire w_Stall = !w_Instruction_Valid || !w_Memory_Ready;
 
   reg [XLEN-1:0] r_PC;  // Program Counter
   wire [XLEN-1:0] w_Instruction;
@@ -51,24 +48,11 @@ module cpu (
 
   reg [XLEN-1:0] w_Reg_Write_data;
 
-  always @* begin
-    // if (!w_Stall) begin
-      case (w_Reg_Write_Select)
-        REG_WRITE_ALU: w_Reg_Write_data = w_Alu_Result;
-        REG_WRITE_CU: w_Reg_Write_data = {31'b0, w_Compare_Result};
-        REG_WRITE_IMM: w_Reg_Write_data = w_Immediate;
-        REG_WRITE_PC_NEXT: w_Reg_Write_data = w_PC_Next;
-        REG_WRITE_DMEM: w_Reg_Write_data = w_Dmem_Data;
-        default: w_Reg_Write_data = 0;  // Default case
-      endcase
-    // end else begin
-    //   w_Reg_Write_data = 0;
-    // end
-  end
 
+  /*----------------PIPELINE STAGE 1----------------*/
 
   arithmetic_logic_unit alu (
-      .i_Enable(!w_Stall),
+      .i_Enable(w_Instruction_Valid),
       .i_Input_A(w_Alu_Port_A),
       .i_Input_B(w_Alu_Port_B),
       .i_Alu_Select(w_Alu_Select),
@@ -76,7 +60,7 @@ module cpu (
   );
 
   comparator_unit comparator_unit (
-      .i_Enable(!w_Stall),
+      .i_Enable(w_Instruction_Valid),
       .i_Input_A(w_Comp_Port_A),
       .i_Input_B(w_Comp_Port_B),
       .i_Compare_Select(w_Compare_Select),
@@ -84,7 +68,7 @@ module cpu (
   );
 
   register_file reg_file (
-      .i_Enable(!w_Stall),
+      .i_Enable(w_Instruction_Valid),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
       .i_Read_Addr_2(w_Rs_2),
@@ -96,7 +80,7 @@ module cpu (
   );
 
   control_unit cu (
-      .i_Enable(!w_Stall),
+      .i_Enable(w_Instruction_Valid),
       .i_Op_Code(w_Instruction[OP_CODE_WIDTH:0]),
       .i_Funct3(w_Instruction[14:12]),
       .i_Funct7_Bit_5(w_Instruction[30]),
@@ -114,7 +98,7 @@ module cpu (
   );
 
   immediate_unit imm_unit (
-      .i_Enable(!w_Stall),
+      .i_Enable(w_Instruction_Valid),
       .i_Imm_Select(w_Imm_Select),
       .i_Instruction_No_Opcode(w_Instruction[XLEN-1:OP_CODE_WIDTH+1]),
       .o_Immediate(w_Immediate)
@@ -128,32 +112,50 @@ module cpu (
       .o_Instruction_Valid(w_Instruction_Valid)
   );
 
- memory_axi mem (
+
+  /*----------------PIPELINE STAGE 2----------------*/
+
+  reg [LS_SEL_WIDTH:0] w_evil_Load_Store_Type = LS_TYPE_NONE;
+  reg w_evil_Write_Enable = 0;
+  reg [XLEN-1:0] w_evil_Addr = 0;
+  reg [XLEN-1:0] w_evil_Write_Data = 0;
+  reg [XLEN-1:0] w_evil_Read_Data = 0;
+
+  wire [MEMORY_STATE_WIDTH:0] w_Memory_State;
+
+  always @(negedge i_Clock) begin
+    if (w_Instruction_Valid) begin
+      w_evil_Load_Store_Type <= w_Load_Store_Type;
+      w_evil_Write_Enable <= w_Mem_Write_Enable;
+      w_evil_Addr <= w_Alu_Result;
+      w_evil_Write_Data <= w_Reg_Source_2;
+    end
+  end
+
+  memory_axi mem (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
-      .i_Load_Store_Type(w_Load_Store_Type),
-      .i_Write_Enable(w_Mem_Write_Enable),
-      .i_Addr(w_Alu_Result),
-      .i_Data(w_Reg_Source_2),
+      .i_Load_Store_Type(w_evil_Load_Store_Type),
+      .i_Write_Enable(w_evil_Write_Enable),
+      .i_Addr(w_evil_Addr),
+      .i_Data(w_evil_Read_Data),
       .o_Data(w_Dmem_Data),
-      .o_Ready(w_Memory_Ready),
-      .o_Data_Valid(w_Memory_Data_Valid)
+      .o_State(w_Memory_State)
   );
 
-  // memory #(
-  //     .MEMORY_DEPTH(1024)
-  // ) mem (
-  //     .i_Enable(!w_Stall),
-  //     .i_Clock(i_Clock),
-  //     .i_Load_Store_Type(w_Load_Store_Type),
-  //     .i_Write_Enable(w_Mem_Write_Enable),
-  //     .i_Addr(w_Alu_Result),
-  //     .i_Data(w_Reg_Source_2),
-  //     .o_Data(w_Dmem_Data)
-  // );
+  always @* begin
+    case (w_Reg_Write_Select)
+      REG_WRITE_ALU: w_Reg_Write_data = w_Instruction_Valid ? 0 : w_Alu_Result;
+      REG_WRITE_CU: w_Reg_Write_data = w_Instruction_Valid ? 0 : {31'b0, w_Compare_Result};
+      REG_WRITE_IMM: w_Reg_Write_data = w_Instruction_Valid ? 0 : w_Immediate;
+      REG_WRITE_PC_NEXT: w_Reg_Write_data = w_Instruction_Valid ? 0 : w_PC_Next;
+      REG_WRITE_DMEM: w_Reg_Write_data = w_Memory_Data_Valid ? w_Dmem_Data : 0;
+      default: w_Reg_Write_data = 0;  // Default case
+    endcase
+  end
 
   always @(posedge i_Clock, posedge i_Reset) begin
-    if (!w_Stall) begin
+    if (w_Instruction_Valid && w_Memory_State == IDLE) begin
       if (i_Reset) begin
         r_PC <= 32'd0;
       end else begin

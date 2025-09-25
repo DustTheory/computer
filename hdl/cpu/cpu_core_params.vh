@@ -12,6 +12,7 @@ localparam ALU_SEL_WIDTH = 4;
 localparam CMP_SEL_WIDTH = 3;
 localparam IMM_SEL_WIDTH = 3;
 localparam LS_SEL_WIDTH = 4;
+localparam MEMORY_STATE_WIDTH = 2;
 
 // Control signals for what to write to the register file
 localparam REG_WRITE_ALU = 0;
