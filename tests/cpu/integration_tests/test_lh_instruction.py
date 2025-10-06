@@ -8,7 +8,9 @@ from cpu.utils import (
 from cpu.constants import (
     OP_I_TYPE_LOAD,
 
-    FUNC3_LS_H
+    FUNC3_LS_H,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -42,7 +44,7 @@ async def test_lh_instruction_when_equal(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.reg_file.Registers[rd].value.integer == mem_value, f"LH instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.integer:#010x}, expected {mem_value:#010x}"
 

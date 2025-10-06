@@ -6,7 +6,9 @@ from cpu.utils import (
     gen_s_type_instruction,
 )
 from cpu.constants import (
-    FUNC3_LS_H
+    FUNC3_LS_H,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -37,7 +39,7 @@ async def test_sh_instruction(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.mem.Memory_Array[mem_address].value == (rs2_value & 0xFF), f"SH instruction failed: Memory at address {mem_address:#010x} is {dut.cpu.mem.Memory_Array[mem_address].value.integer:#010x}, expected {(rs2_value & 0xFF):#010x}"
     assert dut.cpu.mem.Memory_Array[mem_address + 1].value == (rs2_value >> 8), f"SH instruction failed: Memory at address {mem_address+1:#010x} is {dut.cpu.mem.Memory_Array[mem_address+1].value.integer:#010x}, expected {(rs2_value >> 8):#010x}"

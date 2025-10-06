@@ -68,13 +68,13 @@ module cpu (
   );
 
   register_file reg_file (
-      .i_Enable(w_Instruction_Valid),
+      .i_Enable(w_Instruction_Valid || w_evil_Reg_Enable),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
       .i_Read_Addr_2(w_Rs_2),
-      .i_Write_Addr(w_Instruction[11:7]),
-      .i_Write_Data(w_Reg_Write_data),
-      .i_Write_Enable(w_Reg_Write_Enable && w_Memory_Data_Valid),
+      .i_Write_Addr(w_evil_Reg_Write_Addr),
+      .i_Write_Data(w_evil_Reg_Write_Data),
+      .i_Write_Enable(w_evil_Reg_Enable && w_Memory_State == IDLE),
       .o_Read_Data_1(w_Reg_Source_1),
       .o_Read_Data_2(w_Reg_Source_2)
   );
@@ -115,41 +115,54 @@ module cpu (
 
   /*----------------PIPELINE STAGE 2----------------*/
 
-  reg [LS_SEL_WIDTH:0] w_evil_Load_Store_Type = LS_TYPE_NONE;
-  reg w_evil_Write_Enable = 0;
-  reg [XLEN-1:0] w_evil_Addr = 0;
-  reg [XLEN-1:0] w_evil_Write_Data = 0;
-  reg [XLEN-1:0] w_evil_Read_Data = 0;
+  reg [LS_SEL_WIDTH:0] w_evil_Mem_Load_Store_Type = LS_TYPE_NONE;
+  reg w_evil_Mem_Write_Enable = 0;
+  reg [XLEN-1:0] w_evil_Mem_Addr = 0;
+  reg [XLEN-1:0] w_evil_Mem_Write_Data = 0;
+  reg [XLEN-1:0] w_evil_Reg_Write_Data = 0;
+  reg [REG_ADDR_WIDTH-1:0] w_evil_Reg_Write_Addr = 0;
+  reg w_evil_Reg_Enable = 0;
 
   wire [MEMORY_STATE_WIDTH:0] w_Memory_State;
 
   always @(negedge i_Clock) begin
     if (w_Instruction_Valid) begin
-      w_evil_Load_Store_Type <= w_Load_Store_Type;
-      w_evil_Write_Enable <= w_Mem_Write_Enable;
-      w_evil_Addr <= w_Alu_Result;
-      w_evil_Write_Data <= w_Reg_Source_2;
+      w_evil_Mem_Load_Store_Type <= w_Load_Store_Type;
+      w_evil_Mem_Write_Enable <= w_Mem_Write_Enable;
+      w_evil_Mem_Addr <= w_Alu_Result;
+      w_evil_Mem_Write_Data <= w_Reg_Source_2;
+
+      w_evil_Reg_Write_Data <= w_Reg_Write_data;
+      w_evil_Reg_Write_Addr <= w_Instruction[11:7];
+      w_evil_Reg_Enable <= w_Reg_Write_Enable;
+    end else begin
+      if(w_Memory_State == WRITE_SUCCESS || w_Memory_State == READ_SUCCESS) begin
+        w_evil_Mem_Load_Store_Type <= LS_TYPE_NONE;
+        w_evil_Mem_Write_Enable <= 0;
+        w_evil_Mem_Addr <= 0;
+        w_evil_Mem_Write_Data <= 0;
+      end
     end
   end
 
   memory_axi mem (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
-      .i_Load_Store_Type(w_evil_Load_Store_Type),
-      .i_Write_Enable(w_evil_Write_Enable),
-      .i_Addr(w_evil_Addr),
-      .i_Data(w_evil_Read_Data),
+      .i_Load_Store_Type(w_evil_Mem_Load_Store_Type),
+      .i_Write_Enable(w_evil_Mem_Write_Enable),
+      .i_Addr(w_evil_Mem_Addr),
+      .i_Data(w_evil_Mem_Write_Data),
       .o_Data(w_Dmem_Data),
       .o_State(w_Memory_State)
   );
 
   always @* begin
     case (w_Reg_Write_Select)
-      REG_WRITE_ALU: w_Reg_Write_data = w_Instruction_Valid ? 0 : w_Alu_Result;
-      REG_WRITE_CU: w_Reg_Write_data = w_Instruction_Valid ? 0 : {31'b0, w_Compare_Result};
-      REG_WRITE_IMM: w_Reg_Write_data = w_Instruction_Valid ? 0 : w_Immediate;
-      REG_WRITE_PC_NEXT: w_Reg_Write_data = w_Instruction_Valid ? 0 : w_PC_Next;
-      REG_WRITE_DMEM: w_Reg_Write_data = w_Memory_Data_Valid ? w_Dmem_Data : 0;
+      REG_WRITE_ALU: w_Reg_Write_data = w_Alu_Result;
+      REG_WRITE_CU: w_Reg_Write_data = {31'b0, w_Compare_Result};
+      REG_WRITE_IMM: w_Reg_Write_data = w_Immediate;
+      REG_WRITE_PC_NEXT: w_Reg_Write_data = w_PC_Next;
+      REG_WRITE_DMEM: w_Reg_Write_data =  w_Dmem_Data;
       default: w_Reg_Write_data = 0;  // Default case
     endcase
   end

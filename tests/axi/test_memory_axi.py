@@ -41,7 +41,7 @@ async def test_memory(dut):
         dut.memory_axi.i_Addr.value = data_index*4
         dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_LOAD_WORD
 
-        await RisingEdge(dut.memory_axi.o_Data_Valid)
+        await RisingEdge(dut.w_Mem_ready)
         
         value = dut.memory_axi.o_Data.value.integer
         expected = data[data_index]
@@ -72,7 +72,7 @@ async def test_load_byte_unsigned(dut):
     for i in range(4):
         dut.memory_axi.i_Addr.value = i*4
 
-        await RisingEdge(dut.memory_axi.o_Data_Valid)
+        await RisingEdge(dut.w_Mem_ready)
         
         value = dut.memory_axi.o_Data.value.integer
         expected = data[i]
@@ -102,7 +102,7 @@ async def test_load_byte(dut):
     for i in range(4):
         dut.memory_axi.i_Addr.value = i*4
         
-        await RisingEdge(dut.memory_axi.o_Data_Valid)
+        await RisingEdge(dut.w_Mem_ready)
 
         value = dut.memory_axi.o_Data.value.signed_integer
         expected = data[i]
@@ -130,7 +130,7 @@ async def test_load_half_unsigned(dut):
     for i in range(2):
         dut.memory_axi.i_Addr.value = i*4
 
-        await RisingEdge(dut.memory_axi.o_Data_Valid)
+        await RisingEdge(dut.w_Mem_ready)
 
         value = dut.memory_axi.o_Data.value.integer
         expected = data[i]
@@ -157,7 +157,7 @@ async def test_load_half(dut):
     for i in range(2):
         dut.memory_axi.i_Addr.value = i * 4
 
-        await RisingEdge(dut.memory_axi.o_Data_Valid)
+        await RisingEdge(dut.w_Mem_ready)
 
         value = dut.memory_axi.o_Data.value.signed_integer
         expected = data[i]
@@ -183,7 +183,7 @@ async def test_load_word(dut):
     dut.memory_axi.i_Reset.value = 0
     await ClockCycles(dut.memory_axi.i_Clock, 1)
 
-    await RisingEdge(dut.memory_axi.o_Data_Valid)
+    await RisingEdge(dut.w_Mem_ready)
 
     value = dut.memory_axi.o_Data.value.integer
     expected = data
@@ -211,7 +211,7 @@ async def test_store_byte(dut):
         dut.memory_axi.i_Addr.value = i*4
         dut.memory_axi.i_Data.value = data[i]
 
-        await RisingEdge(dut.memory_axi.o_Ready)
+        await RisingEdge(dut.w_Mem_ready)
 
         for j in range(20):
             dut._log.info(f"{dut.memory_axi.ram.mem[j].value.integer:#04x}")
@@ -241,7 +241,7 @@ async def test_store_half(dut):
         dut.memory_axi.i_Addr.value = i * 4
         dut.memory_axi.i_Data.value = data[i]
 
-        await RisingEdge(dut.memory_axi.o_Ready)
+        await RisingEdge(dut.w_Mem_ready)
 
         value = dut.memory_axi.ram.mem[i].value.integer
         expected = data[i]
@@ -268,7 +268,7 @@ async def test_store_word(dut):
     dut.memory_axi.i_Reset.value = 0
     await ClockCycles(dut.memory_axi.i_Clock, 1)
 
-    await RisingEdge(dut.memory_axi.o_Ready)
+    await RisingEdge(dut.w_Mem_ready)
 
     value = dut.memory_axi.ram.mem[0].value
     expected = data

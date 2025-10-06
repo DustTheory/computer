@@ -3,7 +3,7 @@ from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
 from cpu.utils import gen_r_type_instruction
-from cpu.constants import FUNC3_ALU_SRL_SRA
+from cpu.constants import FUNC3_ALU_SRL_SRA, PIPELINE_CYCLES
 
 wait_ns = 1
 
@@ -38,6 +38,6 @@ async def test_sra_instruction(dut):
         dut.cpu.i_Reset.value = 0
         await ClockCycles(dut.cpu.i_Clock, 1)
 
-        await ClockCycles(dut.cpu.i_Clock, 5)
+        await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
         assert dut.cpu.reg_file.Registers[rd].value.signed_integer == expected_result, f"SRA instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.signed_integer:#010x}, expected {expected_result:#010x}"

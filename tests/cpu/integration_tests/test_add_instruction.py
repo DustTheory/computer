@@ -6,7 +6,9 @@ from cpu.utils import (
     gen_r_type_instruction,
 )
 from cpu.constants import (
-    FUNC3_ALU_ADD_SUB
+    FUNC3_ALU_ADD_SUB,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -47,7 +49,7 @@ async def test_add_instruction(dut):
         dut.cpu.reg_file.Registers[rs1].value = rs1_value
         dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
-        await ClockCycles(dut.cpu.i_Clock, 5)
+        await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
         assert dut.cpu.reg_file.Registers[rd].value.signed_integer == expected_result, f"ADD instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.signed_integer:#010x}, expected {expected_result:#010x}"
 

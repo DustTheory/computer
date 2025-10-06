@@ -6,7 +6,9 @@ from cpu.utils import (
     gen_b_type_instruction,
 )
 from cpu.constants import (
-    FUNC3_BRANCH_BGEU
+    FUNC3_BRANCH_BGEU,
+    
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -35,7 +37,7 @@ async def test_bgeu_instruction_when_geu(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
     
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"BGEU instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"
 
@@ -63,6 +65,6 @@ async def test_bgeu_instruction_when_ltu(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
     
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"BGEU instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"

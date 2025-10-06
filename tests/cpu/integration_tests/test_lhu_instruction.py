@@ -7,7 +7,10 @@ from cpu.utils import (
 )
 from cpu.constants import (
     OP_I_TYPE_LOAD,
-    FUNC3_LS_HU
+
+    FUNC3_LS_HU,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -39,7 +42,7 @@ async def test_lhu_instruction(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     expected_value = mem_value  # Should be zero-extended
     assert dut.cpu.reg_file.Registers[rd].value.integer == expected_value, f"LHU instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.integer:#010x}, expected {expected_value:#010x}"

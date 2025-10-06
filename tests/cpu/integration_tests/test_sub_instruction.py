@@ -6,7 +6,7 @@ from cpu.utils import (
     gen_r_type_instruction,
 )
 from cpu.constants import (
-    OP_R_TYPE,
+    PIPELINE_CYCLES,
 
     FUNC3_ALU_ADD_SUB
 )
@@ -50,7 +50,7 @@ async def test_sub_instruction(dut):
         dut.cpu.i_Reset.value = 0
         await ClockCycles(dut.cpu.i_Clock, 1)
 
-        await ClockCycles(dut.cpu.i_Clock, 5)
+        await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
         assert dut.cpu.reg_file.Registers[rd].value.signed_integer == expected_result, f"SUB instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.signed_integer:#010x}, expected {expected_result:#010x}"
 

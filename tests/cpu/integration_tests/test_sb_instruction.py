@@ -6,7 +6,9 @@ from cpu.utils import (
     gen_s_type_instruction,
 )
 from cpu.constants import (
-    FUNC3_LS_B
+    FUNC3_LS_B,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -39,7 +41,7 @@ async def test_sb_instruction(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.mem.Memory_Array[mem_addres].value == rs2_value, f"SB instruction failed: Memory at address {mem_addres:#010x} is {dut.cpu.mem.Memory_Array[mem_addres]:#010x}, expected {rs2_value:#010x}"
 

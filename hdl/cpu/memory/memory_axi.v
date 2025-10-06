@@ -17,6 +17,7 @@ module memory_axi (
   wire w_axil_awready;
   wire w_axil_wready;
   wire w_axil_bvalid;
+  wire [1:0] w_axil_bresp; // Unbound to anything for now, used just for testing
   wire [31:0] w_axil_rdata;
 
   reg [2:0] r_State = IDLE;
@@ -107,7 +108,8 @@ module memory_axi (
       .s_axil_wstrb(r_State == WRITE_SUBMITTING ? 4'b1111 : 0),
       .s_axil_wready(w_axil_wready),
       .s_axil_bvalid(w_axil_bvalid),
-      .s_axil_bready(r_State == WRITE_SUBMITTING)
+      .s_axil_bready(r_State == WRITE_SUBMITTING),
+      .s_axil_bresp(w_axil_bresp)
   );
   // verilator lint_off PINMISSING
 

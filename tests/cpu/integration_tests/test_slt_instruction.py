@@ -3,7 +3,7 @@ from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
 from cpu.utils import gen_r_type_instruction
-from cpu.constants import FUNC3_ALU_SLT
+from cpu.constants import FUNC3_ALU_SLT, PIPELINE_CYCLES
 
 wait_ns = 1
 
@@ -41,6 +41,6 @@ async def test_slt_instruction(dut):
         dut.cpu.i_Reset.value = 0
         await ClockCycles(dut.cpu.i_Clock, 1)
 
-        await ClockCycles(dut.cpu.i_Clock, 5)
+        await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
         assert dut.cpu.reg_file.Registers[rd].value.signed_integer == expected_result, f"SLT instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.signed_integer}, expected {expected_result}"

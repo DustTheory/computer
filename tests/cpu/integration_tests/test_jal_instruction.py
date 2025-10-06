@@ -4,6 +4,8 @@ from cocotb.clock import Clock
 
 from cpu.constants import (
     OP_J_TYPE,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -34,7 +36,7 @@ async def test_jal_instruction(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"JAL instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"
     assert dut.cpu.reg_file.Registers[dest_register].value.integer == expected_register_value, f"JAL instruction failed: Register x{dest_register} is {dut.cpu.reg_file.Registers[dest_register].value.integer:#010x}, expected {expected_register_value:#010x}"

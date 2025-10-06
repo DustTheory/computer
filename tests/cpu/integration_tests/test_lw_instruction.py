@@ -7,7 +7,10 @@ from cpu.utils import (
 )
 from cpu.constants import (
     OP_I_TYPE_LOAD,
-    FUNC3_LS_W
+
+    FUNC3_LS_W,
+
+    PIPELINE_CYCLES,
 )
 
 wait_ns = 1
@@ -18,9 +21,9 @@ async def test_lw_instruction(dut):
     start_address = 64
     rd = 5
     rs1 = 6
-    rs1_value = 200
+    rs1_value = 0
     mem_value = 0xDEADBEEF
-    offset = 8
+    offset = 0
     mem_address = rs1_value + offset
 
     lw_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_W, rs1, offset)
@@ -29,11 +32,8 @@ async def test_lw_instruction(dut):
     dut.cpu.instruction_memory.ram.mem[start_address>>2].value = lw_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
-    dut.cpu.mem.Memory_Array[mem_address].value = mem_value & 0xFF
-    dut.cpu.mem.Memory_Array[mem_address + 1].value = (mem_value >> 8) & 0xFF
-    dut.cpu.mem.Memory_Array[mem_address + 2].value = (mem_value >> 16) & 0xFF
-    dut.cpu.mem.Memory_Array[mem_address + 3].value = (mem_value >> 24) & 0xFF
-
+    dut.cpu.mem.ram.mem[mem_address].value = mem_value
+    
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
@@ -42,6 +42,6 @@ async def test_lw_instruction(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     assert dut.cpu.reg_file.Registers[rd].value.integer == mem_value, f"LW instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.integer:#010x}, expected {mem_value:#010x}"

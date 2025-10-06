@@ -86,3 +86,6 @@ REG_WRITE_IMM = 2
 REG_WRITE_PC_NEXT = 3
 REG_WRITE_DMEM = 4
 REG_WRITE_NONE = 5
+
+# Number of cycles the pipeline takes to complete an instruction
+PIPELINE_CYCLES = 6
