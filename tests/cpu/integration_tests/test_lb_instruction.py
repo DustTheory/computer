@@ -33,7 +33,7 @@ async def test_lb_instruction_when_equal(dut):
     dut.cpu.r_PC.value = start_address
     dut.cpu.instruction_memory.ram.mem[start_address>>2].value = lb_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.mem.ram.mem[mem_address].value = mem_value
+    dut.cpu.mem.ram.mem[mem_address>>2].value = mem_value & 0xFF
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())

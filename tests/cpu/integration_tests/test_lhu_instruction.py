@@ -31,8 +31,7 @@ async def test_lhu_instruction(dut):
     dut.cpu.r_PC.value = start_address
     dut.cpu.instruction_memory.ram.mem[start_address>>2].value = lhu_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.mem.Memory_Array[mem_address].value = mem_value & 0xFF
-    dut.cpu.mem.Memory_Array[mem_address + 1].value = (mem_value >> 8) & 0xFF
+    dut.cpu.mem.ram.mem[mem_address >> 2].value = mem_value & 0xFFFF
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())

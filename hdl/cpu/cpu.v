@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 `include "cpu_core_params.vh"
+`include "memory/memory.vh"
 
 module cpu (
     input i_Reset,
@@ -46,7 +47,6 @@ module cpu (
   wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Instruction[19:15];
   wire [REG_ADDR_WIDTH-1:0] w_Rs_2 = w_Instruction[24:20];
 
-  reg [XLEN-1:0] w_Reg_Write_data;
 
 
   /*----------------PIPELINE STAGE 1----------------*/
@@ -68,13 +68,13 @@ module cpu (
   );
 
   register_file reg_file (
-      .i_Enable(w_Instruction_Valid || w_evil_Reg_Enable),
+      .i_Enable(w_Instruction_Valid || w_Wb_Enable),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
       .i_Read_Addr_2(w_Rs_2),
-      .i_Write_Addr(w_evil_Reg_Write_Addr),
-      .i_Write_Data(w_evil_Reg_Write_Data),
-      .i_Write_Enable(w_evil_Reg_Enable && w_Memory_State == IDLE),
+      .i_Write_Addr(r_S3_Rd),
+      .i_Write_Data(w_Wb_Data),
+      .i_Write_Enable(w_Wb_Enable),
       .o_Read_Data_1(w_Reg_Source_1),
       .o_Read_Data_2(w_Reg_Source_2)
   );
@@ -115,63 +115,156 @@ module cpu (
 
   /*----------------PIPELINE STAGE 2----------------*/
 
-  reg [LS_SEL_WIDTH:0] w_evil_Mem_Load_Store_Type = LS_TYPE_NONE;
-  reg w_evil_Mem_Write_Enable = 0;
-  reg [XLEN-1:0] w_evil_Mem_Addr = 0;
-  reg [XLEN-1:0] w_evil_Mem_Write_Data = 0;
-  reg [XLEN-1:0] w_evil_Reg_Write_Data = 0;
-  reg [REG_ADDR_WIDTH-1:0] w_evil_Reg_Write_Addr = 0;
-  reg w_evil_Reg_Enable = 0;
+
+  // Stage2 (Memory/Wait) pipeline registers
+  reg                r_S2_Valid;
+  reg [LS_SEL_WIDTH:0] r_S2_Load_Store_Type;
+  reg                r_S2_Mem_Write_Enable;
+  reg [XLEN-1:0]     r_S2_Alu_Result;
+  reg [XLEN-1:0]     r_S2_Store_Data;
+  reg [REG_ADDR_WIDTH-1:0] r_S2_Rd;
+  reg                r_S2_Rd_Write_Enable;
+  reg [REG_ADDR_WIDTH-1:0] r_S2_Wb_Src;
+  reg [XLEN-1:0]     r_S2_Immediate;
+  reg [XLEN-1:0]     r_S2_PC_Next;
+  reg [XLEN-1:0]     r_S2_PC_Fetch;
+  reg                r_S2_Compare_Result;
+  reg [XLEN-1:0]     r_S2_Load_Data;
+
+  // Stage3 (Writeback) pipeline registers
+  reg                r_S3_Valid;
+  reg [LS_SEL_WIDTH:0] r_S3_Load_Store_Type;
+  reg [XLEN-1:0]     r_S3_Alu_Result;
+  reg [REG_ADDR_WIDTH-1:0] r_S3_Rd;
+  reg                r_S3_Rd_Write_Enable;
+  reg [REG_ADDR_WIDTH-1:0] r_S3_Wb_Src;
+  reg [XLEN-1:0]     r_S3_Immediate;
+  reg [XLEN-1:0]     r_S3_PC_Next;
+  reg [XLEN-1:0]     r_S3_PC_Fetch;
+  reg                r_S3_Compare_Result;
+  reg [XLEN-1:0]     r_S3_Load_Data;
 
   wire [MEMORY_STATE_WIDTH:0] w_Memory_State;
 
-  always @(negedge i_Clock) begin
-    if (w_Instruction_Valid) begin
-      w_evil_Mem_Load_Store_Type <= w_Load_Store_Type;
-      w_evil_Mem_Write_Enable <= w_Mem_Write_Enable;
-      w_evil_Mem_Addr <= w_Alu_Result;
-      w_evil_Mem_Write_Data <= w_Reg_Source_2;
-
-      w_evil_Reg_Write_Data <= w_Reg_Write_data;
-      w_evil_Reg_Write_Addr <= w_Instruction[11:7];
-      w_evil_Reg_Enable <= w_Reg_Write_Enable;
-    end else begin
-      if(w_Memory_State == WRITE_SUCCESS || w_Memory_State == READ_SUCCESS) begin
-        w_evil_Mem_Load_Store_Type <= LS_TYPE_NONE;
-        w_evil_Mem_Write_Enable <= 0;
-        w_evil_Mem_Addr <= 0;
-        w_evil_Mem_Write_Data <= 0;
-      end
+  function automatic bit f_Is_Load(input [LS_SEL_WIDTH:0] v);
+    begin
+      case (v)
+        LS_TYPE_LOAD_WORD,
+        LS_TYPE_LOAD_HALF,
+        LS_TYPE_LOAD_HALF_UNSIGNED,
+        LS_TYPE_LOAD_BYTE,
+        LS_TYPE_LOAD_BYTE_UNSIGNED: f_Is_Load = 1'b1;
+        default: f_Is_Load = 1'b0;
+      endcase
     end
-  end
+  endfunction
 
+  function automatic bit f_Is_Store(input [LS_SEL_WIDTH:0] v);
+    begin
+      case (v)
+        LS_TYPE_STORE_WORD,
+        LS_TYPE_STORE_HALF,
+        LS_TYPE_STORE_BYTE: f_Is_Store = 1'b1;
+        default: f_Is_Store = 1'b0;
+      endcase
+    end
+  endfunction
+
+  wire w_S2_Is_Load  = r_S2_Valid && f_Is_Load(r_S2_Load_Store_Type);
+  wire w_S2_Is_Store = r_S2_Valid && f_Is_Store(r_S2_Load_Store_Type);
+
+  // Memory state helper flags
+  wire w_Mem_Read_Done  = (w_Memory_State == READ_SUCCESS);
+  wire w_Mem_Write_Done = (w_Memory_State == WRITE_SUCCESS);
+  wire w_Mem_Busy       = (w_Memory_State != IDLE);
+
+  wire w_Stall_S1 = r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done);
+
+  // Memory interface driven from S2
   memory_axi mem (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
-      .i_Load_Store_Type(w_evil_Mem_Load_Store_Type),
-      .i_Write_Enable(w_evil_Mem_Write_Enable),
-      .i_Addr(w_evil_Mem_Addr),
-      .i_Data(w_evil_Mem_Write_Data),
+      .i_Load_Store_Type(r_S2_Load_Store_Type),
+      .i_Write_Enable(r_S2_Mem_Write_Enable),
+      .i_Addr(r_S2_Alu_Result),
+      .i_Data(r_S2_Store_Data),
       .o_Data(w_Dmem_Data),
       .o_State(w_Memory_State)
   );
 
+  // Pipeline progression
+  always @(posedge i_Clock) begin
+    if (i_Reset) begin
+      r_S2_Valid <= 1'b0;
+      r_S3_Valid <= 1'b0;
+      r_S2_Load_Store_Type <= LS_TYPE_NONE;
+      r_S3_Load_Store_Type <= LS_TYPE_NONE;
+      r_S2_Rd_Write_Enable <= 1'b0;
+      r_S3_Rd_Write_Enable <= 1'b0;
+    end else begin
+      // Capture load data when ready
+      if (w_Mem_Read_Done && w_S2_Is_Load)
+        r_S2_Load_Data <= w_Dmem_Data;
+
+      if (!w_Stall_S1) begin
+        // S2 -> S3
+        r_S3_Valid           <= r_S2_Valid;
+        r_S3_Load_Store_Type <= r_S2_Load_Store_Type;
+        r_S3_Alu_Result      <= r_S2_Alu_Result;
+        r_S3_Rd              <= r_S2_Rd;
+        r_S3_Rd_Write_Enable <= r_S2_Rd_Write_Enable;
+        r_S3_Wb_Src          <= r_S2_Wb_Src;
+        r_S3_Immediate       <= r_S2_Immediate;
+  r_S3_PC_Next         <= r_S2_PC_Next;
+  r_S3_PC_Fetch        <= r_S2_PC_Fetch;
+        r_S3_Compare_Result  <= r_S2_Compare_Result;
+        if (w_Mem_Read_Done && w_S2_Is_Load)
+          r_S3_Load_Data <= w_Dmem_Data;
+        else
+          r_S3_Load_Data <= r_S2_Load_Data;
+
+        // Stage1 -> S2 capture (new instruction)
+        r_S2_Valid            <= w_Instruction_Valid;
+        r_S2_Load_Store_Type  <= w_Load_Store_Type;
+        r_S2_Mem_Write_Enable <= w_Mem_Write_Enable;
+        r_S2_Alu_Result       <= w_Alu_Result;
+        r_S2_Store_Data       <= w_Reg_Source_2;
+        r_S2_Rd               <= w_Instruction[11:7];
+        r_S2_Rd_Write_Enable  <= w_Reg_Write_Enable;
+        r_S2_Wb_Src           <= w_Reg_Write_Select;
+        r_S2_Immediate        <= w_Immediate;
+        r_S2_PC_Next          <= w_PC_Next;
+        r_S2_PC_Fetch         <= r_PC;
+        r_S2_Compare_Result   <= w_Compare_Result;
+        if (!w_Instruction_Valid) r_S2_Load_Data <= {XLEN{1'b0}};
+      end
+      // else stall
+    end
+  end
+
+  reg [XLEN-1:0] w_Wb_Data;
   always @* begin
-    case (w_Reg_Write_Select)
-      REG_WRITE_ALU: w_Reg_Write_data = w_Alu_Result;
-      REG_WRITE_CU: w_Reg_Write_data = {31'b0, w_Compare_Result};
-      REG_WRITE_IMM: w_Reg_Write_data = w_Immediate;
-      REG_WRITE_PC_NEXT: w_Reg_Write_data = w_PC_Next;
-      REG_WRITE_DMEM: w_Reg_Write_data =  w_Dmem_Data;
-      default: w_Reg_Write_data = 0;  // Default case
+    case (r_S3_Wb_Src)
+      REG_WRITE_ALU:     w_Wb_Data = r_S3_Alu_Result;
+      REG_WRITE_CU:      w_Wb_Data = {31'b0, r_S3_Compare_Result};
+      REG_WRITE_IMM:     w_Wb_Data = r_S3_Immediate;
+      REG_WRITE_PC_NEXT: w_Wb_Data = r_S3_PC_Next;
+      REG_WRITE_DMEM:    w_Wb_Data = r_S3_Load_Data;
+      default:           w_Wb_Data = {XLEN{1'b0}};
     endcase
   end
 
-  always @(posedge i_Clock, posedge i_Reset) begin
-    if (w_Instruction_Valid && w_Memory_State == IDLE) begin
-      if (i_Reset) begin
-        r_PC <= 32'd0;
-      end else begin
+  wire w_S3_Is_Load  = f_Is_Load(r_S3_Load_Store_Type);
+  wire w_S3_Is_Store = f_Is_Store(r_S3_Load_Store_Type);
+  wire w_Wb_Enable   = r_S3_Valid && r_S3_Rd_Write_Enable && !w_S3_Is_Store && (!w_S3_Is_Load || 1'b1);
+
+  wire w_Store_Commit = w_Mem_Write_Done && w_S2_Is_Store && r_S2_Valid;
+  wire w_Retire_Reg   = w_Wb_Enable;
+  wire w_Retire       = w_Retire_Reg || w_Store_Commit;
+
+  always @(posedge i_Clock) begin
+    if (!i_Reset) begin
+      if (!w_Stall_S1 && w_Instruction_Valid) begin
         r_PC <= w_Pc_Alu_Mux_Select ? w_Alu_Result : w_PC_Next;
       end
     end

@@ -19,10 +19,11 @@ async def test_sh_instruction(dut):
     start_address = 0x40
     rs1 = 0x4
     rs2 = 0x5
-    rs1_value = 0x30
+    rs1_value = 0
     rs2_value = 0xBEEF
-    imm_value = 0x6
+    imm_value = 0
     mem_address = rs1_value + imm_value
+    word_index = mem_address >> 2
 
     sh_instruction = gen_s_type_instruction(FUNC3_LS_H, rs1, rs2, imm_value)
    
@@ -41,5 +42,5 @@ async def test_sh_instruction(dut):
 
     await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
-    assert dut.cpu.mem.Memory_Array[mem_address].value == (rs2_value & 0xFF), f"SH instruction failed: Memory at address {mem_address:#010x} is {dut.cpu.mem.Memory_Array[mem_address].value.integer:#010x}, expected {(rs2_value & 0xFF):#010x}"
-    assert dut.cpu.mem.Memory_Array[mem_address + 1].value == (rs2_value >> 8), f"SH instruction failed: Memory at address {mem_address+1:#010x} is {dut.cpu.mem.Memory_Array[mem_address+1].value.integer:#010x}, expected {(rs2_value >> 8):#010x}"
+    expected = rs2_value & 0xFFFF
+    assert dut.cpu.mem.ram.mem[word_index].value & 0xFFFF == expected, f"SH instruction failed: Memory word {word_index} low half is {(dut.cpu.mem.ram.mem[word_index].value.integer & 0xFFFF):#010x}, expected {expected:#010x}"

@@ -32,7 +32,7 @@ async def test_lw_instruction(dut):
     dut.cpu.instruction_memory.ram.mem[start_address>>2].value = lw_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
-    dut.cpu.mem.ram.mem[mem_address].value = mem_value
+    dut.cpu.mem.ram.mem[mem_address >> 2].value = mem_value
     
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
