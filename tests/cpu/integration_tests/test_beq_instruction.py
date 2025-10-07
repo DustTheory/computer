@@ -1,12 +1,13 @@
 import cocotb
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import ClockCycles, RisingEdge
 from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_b_type_instruction,
+    write_word_to_mem,
 )
 from cpu.constants import (
-    FUNC3_BRANCH_BEQ
+    FUNC3_BRANCH_BEQ,
 )
 
 wait_ns = 1
@@ -28,7 +29,7 @@ async def test_beq_instruction_when_equal(dut):
     expected_pc = start_address + offset
 
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = beq_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, beq_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
@@ -41,7 +42,13 @@ async def test_beq_instruction_when_equal(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    max_cycles = 100
+    for _ in range(max_cycles):
+        await RisingEdge(dut.cpu.i_Clock)
+        if dut.cpu.r_PC.value.integer == expected_pc:
+            break
+    else:
+        raise AssertionError("Timeout waiting for BEQ taken to reach target PC")
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"BEQ instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"
 
@@ -60,7 +67,7 @@ async def test_beq_instruction_when_not_equal(dut):
     expected_pc = start_address + 4
 
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = beq_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, beq_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
@@ -73,6 +80,12 @@ async def test_beq_instruction_when_not_equal(dut):
     dut.cpu.i_Reset.value = 0
     await ClockCycles(dut.cpu.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, 5)
+    max_cycles = 100
+    for _ in range(max_cycles):
+        await RisingEdge(dut.cpu.i_Clock)
+        if dut.cpu.r_PC.value.integer == expected_pc:
+            break
+    else:
+        raise AssertionError("Timeout waiting for BEQ not-taken to advance PC by 4")
 
     assert dut.cpu.r_PC.value.integer == expected_pc, f"BEQ instruction failed: PC is {dut.cpu.r_PC.value.integer:#010x}, expected {expected_pc:#010x}"

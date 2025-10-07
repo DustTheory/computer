@@ -54,3 +54,22 @@ def gen_r_type_instruction(rd, funct3, rs1, rs2, funct7):
     instruction |= rs2 << 20
     instruction |= funct7 << 25
     return instruction
+
+def write_word_to_mem(mem_array, addr, value):
+    """Write a 32-bit value into byte-addressable cocotb memory (little-endian)."""
+    mem_array[addr + 0].value = (value >> 0) & 0xFF
+    mem_array[addr + 1].value = (value >> 8) & 0xFF
+    mem_array[addr + 2].value = (value >> 16) & 0xFF
+    mem_array[addr + 3].value = (value >> 24) & 0xFF
+
+def write_half_to_mem(mem_array, addr, value):
+    mem_array[addr + 0].value = (value >> 0) & 0xFF
+    mem_array[addr + 1].value = (value >> 8) & 0xFF
+
+def write_byte_to_mem(mem_array, addr, value):
+    mem_array[addr].value = value & 0xFF
+
+def write_instructions(mem_array, base_addr, instructions):
+    """Write a list of 32-bit instructions at word stride (4 bytes)."""
+    for i, ins in enumerate(instructions):
+        write_word_to_mem(mem_array, base_addr + 4*i, ins)

@@ -67,114 +67,121 @@ module axil_ram #
     input  wire                   s_axil_rready
 );
 
-parameter VALID_ADDR_WIDTH = ADDR_WIDTH - $clog2(STRB_WIDTH);
-parameter WORD_WIDTH = STRB_WIDTH;
-parameter WORD_SIZE = DATA_WIDTH/WORD_WIDTH;
+localparam BYTES_PER_BEAT = STRB_WIDTH; // DATA_WIDTH/8
 
-reg mem_wr_en;
-reg mem_rd_en;
+// Byte-addressable memory array (each location is one byte)
+// Size: 2**ADDR_WIDTH bytes
+reg [7:0] mem[(2**ADDR_WIDTH)-1:0];
 
 reg s_axil_awready_reg = 1'b0, s_axil_awready_next;
-reg s_axil_wready_reg = 1'b0, s_axil_wready_next;
-reg s_axil_bvalid_reg = 1'b0, s_axil_bvalid_next;
+reg s_axil_wready_reg  = 1'b0, s_axil_wready_next;
+reg s_axil_bvalid_reg  = 1'b0, s_axil_bvalid_next;
 reg s_axil_arready_reg = 1'b0, s_axil_arready_next;
-reg [DATA_WIDTH-1:0] s_axil_rdata_reg = {DATA_WIDTH{1'b0}}, s_axil_rdata_next;
-reg s_axil_rvalid_reg = 1'b0, s_axil_rvalid_next;
+reg s_axil_rvalid_reg  = 1'b0, s_axil_rvalid_next;
+reg [DATA_WIDTH-1:0] s_axil_rdata_reg = {DATA_WIDTH{1'b0}};
 reg [DATA_WIDTH-1:0] s_axil_rdata_pipe_reg = {DATA_WIDTH{1'b0}};
 reg s_axil_rvalid_pipe_reg = 1'b0;
 
-// (* RAM_STYLE="BLOCK" *)
-reg [DATA_WIDTH-1:0] mem[(2**VALID_ADDR_WIDTH)-1:0];
-
-wire [VALID_ADDR_WIDTH-1:0] s_axil_awaddr_valid = s_axil_awaddr >> (ADDR_WIDTH - VALID_ADDR_WIDTH);
-wire [VALID_ADDR_WIDTH-1:0] s_axil_araddr_valid = s_axil_araddr >> (ADDR_WIDTH - VALID_ADDR_WIDTH);
+// Latch addresses when accepted
+reg [ADDR_WIDTH-1:0] r_awaddr;
+reg [ADDR_WIDTH-1:0] r_araddr;
+reg r_awaddr_valid;
+reg r_araddr_valid;
 
 assign s_axil_awready = s_axil_awready_reg;
-assign s_axil_wready = s_axil_wready_reg;
-assign s_axil_bresp = 2'b00;
-assign s_axil_bvalid = s_axil_bvalid_reg;
+assign s_axil_wready  = s_axil_wready_reg;
+assign s_axil_bresp   = 2'b00;
+assign s_axil_bvalid  = s_axil_bvalid_reg;
 assign s_axil_arready = s_axil_arready_reg;
-assign s_axil_rdata = PIPELINE_OUTPUT ? s_axil_rdata_pipe_reg : s_axil_rdata_reg;
-assign s_axil_rresp = 2'b00;
-assign s_axil_rvalid = PIPELINE_OUTPUT ? s_axil_rvalid_pipe_reg : s_axil_rvalid_reg;
+assign s_axil_rdata   = PIPELINE_OUTPUT ? s_axil_rdata_pipe_reg : s_axil_rdata_reg;
+assign s_axil_rresp   = 2'b00;
+assign s_axil_rvalid  = PIPELINE_OUTPUT ? s_axil_rvalid_pipe_reg : s_axil_rvalid_reg;
 
 integer i, j;
 
 initial begin
-    // two nested loops for smaller number of iterations per loop
-    // workaround for synthesizer complaints about large loop counts
-    for (i = 0; i < 2**VALID_ADDR_WIDTH; i = i + 2**(VALID_ADDR_WIDTH/2)) begin
-        for (j = i; j < i + 2**(VALID_ADDR_WIDTH/2); j = j + 1) begin
-            mem[j] = 0;
-        end
+    for (i = 0; i < 2**ADDR_WIDTH; i = i + 1) begin
+        mem[i] = 8'h00;
     end
 end
 
 always @* begin
-    mem_wr_en = 1'b0;
-
     s_axil_awready_next = 1'b0;
-    s_axil_wready_next = 1'b0;
-    s_axil_bvalid_next = s_axil_bvalid_reg && !s_axil_bready;
+    s_axil_wready_next  = 1'b0;
+    s_axil_bvalid_next  = s_axil_bvalid_reg && !s_axil_bready;
 
-    if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && (!s_axil_awready && !s_axil_wready)) begin
+    if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && !s_axil_awready_reg && !s_axil_wready_reg) begin
         s_axil_awready_next = 1'b1;
-        s_axil_wready_next = 1'b1;
-        s_axil_bvalid_next = 1'b1;
-
-        mem_wr_en = 1'b1;
+        s_axil_wready_next  = 1'b1;
+        s_axil_bvalid_next  = 1'b1; // write response available next cycle
     end
 end
 
 always @(posedge clk) begin
-    s_axil_awready_reg <= s_axil_awready_next;
-    s_axil_wready_reg <= s_axil_wready_next;
-    s_axil_bvalid_reg <= s_axil_bvalid_next;
-
-    for (i = 0; i < WORD_WIDTH; i = i + 1) begin
-        if (mem_wr_en && s_axil_wstrb[i]) begin
-            mem[s_axil_awaddr_valid][WORD_SIZE*i +: WORD_SIZE] <= s_axil_wdata[WORD_SIZE*i +: WORD_SIZE];
-        end
-    end
-
     if (rst) begin
         s_axil_awready_reg <= 1'b0;
-        s_axil_wready_reg <= 1'b0;
-        s_axil_bvalid_reg <= 1'b0;
+        s_axil_wready_reg  <= 1'b0;
+        s_axil_bvalid_reg  <= 1'b0;
+        r_awaddr_valid     <= 1'b0;
+    end else begin
+        s_axil_awready_reg <= s_axil_awready_next;
+        s_axil_wready_reg  <= s_axil_wready_next;
+        s_axil_bvalid_reg  <= s_axil_bvalid_next;
+
+        // Latch address when accepting
+        if (s_axil_awready_next) begin
+            r_awaddr       <= s_axil_awaddr;
+            r_awaddr_valid <= 1'b1;
+        end else if (s_axil_bvalid_reg && s_axil_bready) begin
+            r_awaddr_valid <= 1'b0; // complete
+        end
+
+        // Perform byte writes
+        if (s_axil_awready_next) begin
+            for (i = 0; i < STRB_WIDTH; i = i + 1) begin
+                if (s_axil_wstrb[i]) begin
+                    mem[{ { (32-ADDR_WIDTH){1'b0} }, s_axil_awaddr} + i] <= s_axil_wdata[8*i +: 8];
+                end
+            end
+        end
     end
 end
 
 always @* begin
-    mem_rd_en = 1'b0;
-
     s_axil_arready_next = 1'b0;
-    s_axil_rvalid_next = s_axil_rvalid_reg && !(s_axil_rready || (PIPELINE_OUTPUT && !s_axil_rvalid_pipe_reg));
+    s_axil_rvalid_next  = s_axil_rvalid_reg && !(s_axil_rready || (PIPELINE_OUTPUT && !s_axil_rvalid_pipe_reg));
 
-    if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready || (PIPELINE_OUTPUT && !s_axil_rvalid_pipe_reg)) && (!s_axil_arready)) begin
-        s_axil_arready_next = 1'b1;
-        s_axil_rvalid_next = 1'b1;
-
-        mem_rd_en = 1'b1;
+    if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready || (PIPELINE_OUTPUT && !s_axil_rvalid_pipe_reg)) && !s_axil_arready_reg) begin
+        s_axil_arready_next = 1'b1; // accept read address
+        s_axil_rvalid_next  = 1'b1; // data valid next cycle (registered below)
     end
 end
 
 always @(posedge clk) begin
-    s_axil_arready_reg <= s_axil_arready_next;
-    s_axil_rvalid_reg <= s_axil_rvalid_next;
-
-    if (mem_rd_en) begin
-        s_axil_rdata_reg <= mem[s_axil_araddr_valid];
-    end
-
-    if (!s_axil_rvalid_pipe_reg || s_axil_rready) begin
-        s_axil_rdata_pipe_reg <= s_axil_rdata_reg;
-        s_axil_rvalid_pipe_reg <= s_axil_rvalid_reg;
-    end
-
     if (rst) begin
-        s_axil_arready_reg <= 1'b0;
-        s_axil_rvalid_reg <= 1'b0;
+        s_axil_arready_reg     <= 1'b0;
+        s_axil_rvalid_reg      <= 1'b0;
         s_axil_rvalid_pipe_reg <= 1'b0;
+        r_araddr_valid         <= 1'b0;
+    end else begin
+        s_axil_arready_reg <= s_axil_arready_next;
+        s_axil_rvalid_reg  <= s_axil_rvalid_next;
+
+        if (s_axil_arready_next) begin
+            r_araddr       <= s_axil_araddr;
+            r_araddr_valid <= 1'b1;
+            // Assemble DATA_WIDTH bits starting at byte address
+            for (i = 0; i < STRB_WIDTH; i = i + 1) begin
+                s_axil_rdata_reg[8*i +: 8] <= mem[{ { (32-ADDR_WIDTH){1'b0} }, s_axil_araddr} + i];
+            end
+        end else if (s_axil_rvalid_reg && s_axil_rready) begin
+            r_araddr_valid <= 1'b0;
+        end
+
+        if (!s_axil_rvalid_pipe_reg || s_axil_rready) begin
+            s_axil_rdata_pipe_reg  <= s_axil_rdata_reg;
+            s_axil_rvalid_pipe_reg <= s_axil_rvalid_reg;
+        end
     end
 end
 

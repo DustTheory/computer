@@ -2,8 +2,8 @@ import cocotb
 from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
-from cpu.utils import gen_i_type_instruction
-from cpu.constants import OP_I_TYPE_ALU, FUNC3_ALU_XOR
+from cpu.utils import gen_i_type_instruction, write_word_to_mem
+from cpu.constants import OP_I_TYPE_ALU, FUNC3_ALU_XOR, PIPELINE_CYCLES
 
 wait_ns = 1
 
@@ -28,17 +28,19 @@ async def test_xori_instruction(dut):
     cocotb.start_soon(clock.start())
 
     for rs1_value, imm_value, expected_result in tests:
-        instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_XOR, rs1, imm_value)
-
-        dut.cpu.r_PC.value = start_address
-        dut.cpu.instruction_memory.ram.mem[start_address>>2].value = instruction
-        dut.cpu.reg_file.Registers[rs1].value = rs1_value
-
         dut.cpu.i_Reset.value = 1
         await ClockCycles(dut.cpu.i_Clock, 1)
         dut.cpu.i_Reset.value = 0
         await ClockCycles(dut.cpu.i_Clock, 1)
 
-        await ClockCycles(dut.cpu.i_Clock, 5)
-        
-        assert dut.cpu.reg_file.Registers[rd].value.integer == expected_result, f"XORI instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.integer:#010x}, expected {expected_result:#010x}"
+        instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_XOR, rs1, imm_value)
+        write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, instruction)
+        dut.cpu.r_PC.value = start_address
+        dut.cpu.reg_file.Registers[rs1].value = rs1_value & 0xFFFFFFFF
+
+        await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
+
+        actual = dut.cpu.reg_file.Registers[rd].value.integer
+        assert actual == expected_result, (
+            f"XORI failed: rs1={rs1_value:#010x} imm={imm_value:#06x} -> rd={actual:#010x} expected={expected_result:#010x}"
+        )

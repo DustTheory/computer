@@ -1,6 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer
 
+from cpu.utils import write_instructions
+
 wait_ns = 1
 
 @cocotb.test()
@@ -9,13 +11,9 @@ async def test_read_instruction(dut):
 
     instructions = [0x12345678, 0x9ABCDEF0, 0x0FEDCBA9, 0x87654321]
 
-    dut.instruction_memory_axi.ram.mem[0].value = instructions[0]
-    dut.instruction_memory_axi.ram.mem[1].value = instructions[1]
-    dut.instruction_memory_axi.ram.mem[2].value = instructions[2]
-    dut.instruction_memory_axi.ram.mem[3].value = instructions[3]
+    write_instructions(dut.instruction_memory_axi.ram.mem, 0x0, instructions)
 
     for instruction_index in range(4):
-
         dut.instruction_memory_axi.i_Instruction_Addr.value = instruction_index*4
 
         for clock_cnt in range(10):
@@ -33,7 +31,6 @@ async def test_read_instruction(dut):
             if dut.instruction_memory_axi.o_Instruction_Valid.value:
                 break
 
-
         value = dut.instruction_memory_axi.o_Instruction.value.integer
         expected = instructions[instruction_index]
-        assert value == expected, f"Read instruction failed at address 0: got {value:#010x}, expected {expected:#010x}"
+        assert value == expected, f"Read instruction failed at address {instruction_index*4:#06x}: got {value:#010x}, expected {expected:#010x}"
