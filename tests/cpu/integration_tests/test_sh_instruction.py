@@ -4,6 +4,7 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_s_type_instruction,
+    write_word_to_mem,
 )
 from cpu.constants import (
     FUNC3_LS_H,
@@ -23,12 +24,13 @@ async def test_sh_instruction(dut):
     rs2_value = 0xBEEF
     imm_value = 0
     mem_address = rs1_value + imm_value
-    word_index = mem_address >> 2
+    low_byte_addr  = mem_address
+    high_byte_addr = mem_address + 1
 
     sh_instruction = gen_s_type_instruction(FUNC3_LS_H, rs1, rs2, imm_value)
    
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = sh_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, sh_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
@@ -42,5 +44,7 @@ async def test_sh_instruction(dut):
 
     await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
-    expected = rs2_value & 0xFFFF
-    assert dut.cpu.mem.ram.mem[word_index].value & 0xFFFF == expected, f"SH instruction failed: Memory word {word_index} low half is {(dut.cpu.mem.ram.mem[word_index].value.integer & 0xFFFF):#010x}, expected {expected:#010x}"
+    expected_low  = rs2_value & 0xFF
+    expected_high = (rs2_value >> 8) & 0xFF
+    assert dut.cpu.mem.ram.mem[low_byte_addr].value == expected_low, f"SH instruction failed: low byte {low_byte_addr} is {dut.cpu.mem.ram.mem[low_byte_addr].value.integer:#04x}, expected {expected_low:#04x}"
+    assert dut.cpu.mem.ram.mem[high_byte_addr].value == expected_high, f"SH instruction failed: high byte {high_byte_addr} is {dut.cpu.mem.ram.mem[high_byte_addr].value.integer:#04x}, expected {expected_high:#04x}"

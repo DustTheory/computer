@@ -4,6 +4,7 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_s_type_instruction,
+    write_word_to_mem,
 )
 from cpu.constants import (
     FUNC3_LS_W,
@@ -27,7 +28,7 @@ async def test_sw_instruction(dut):
     sw_instruction = gen_s_type_instruction(FUNC3_LS_W, rs1, rs2, imm_value)
     
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = sw_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, sw_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
@@ -41,4 +42,7 @@ async def test_sw_instruction(dut):
 
     await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
-    assert dut.cpu.mem.ram.mem[mem_address].value == rs2_value, f"SW instruction failed: Memory at address {mem_address:#010x} is {dut.cpu.mem.ram.mem[mem_address].value.integer:#010x}, expected {rs2_value:#010x}"
+    for i in range(4):
+        expected_byte = (rs2_value >> (8*i)) & 0xFF
+        assert dut.cpu.mem.ram.mem[mem_address + i].value == expected_byte, (
+            f"SW instruction failed: byte {mem_address+i} is {dut.cpu.mem.ram.mem[mem_address+i].value.integer:#04x}, expected {expected_byte:#04x}")

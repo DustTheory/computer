@@ -5,6 +5,7 @@ from cocotb.clock import Clock
 from cpu.constants import (
     OP_J_TYPE,
 )
+from cpu.utils import write_word_to_mem
 
 wait_ns = 1
 
@@ -23,8 +24,8 @@ async def test_jal_instruction(dut):
     jal_instruction |= dest_register << 7 
     jal_instruction |= magic_value << 12
 
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, jal_instruction)
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = jal_instruction
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())

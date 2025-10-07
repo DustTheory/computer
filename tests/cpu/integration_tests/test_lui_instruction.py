@@ -1,12 +1,12 @@
 import cocotb
-from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge
+from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
 from cpu.constants import (
     OP_U_TYPE_LUI,
-
     PIPELINE_CYCLES,
 )
+from cpu.utils import write_word_to_mem
 
 wait_ns = 1
 
@@ -14,11 +14,13 @@ wait_ns = 1
 async def test_lui_instruction(dut):
     """Test LUI instruction"""
 
+    start_address = 0x0
     lui_instruction = OP_U_TYPE_LUI
-    lui_instruction |= 1 << 7  # rd = x1
-    lui_instruction |= 0x12345 << 12 # immediate value
+    lui_instruction |= 1 << 7
+    lui_instruction |= 0x12345 << 12
 
-    dut.cpu.instruction_memory.ram.mem[0].value = lui_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, lui_instruction)
+    dut.cpu.r_PC.value = start_address
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())

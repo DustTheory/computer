@@ -8,6 +8,7 @@ from cpu.utils import (
 from cpu.constants import (
     OP_I_TYPE_JALR,
 )
+from cpu.utils import write_word_to_mem
 
 wait_ns = 1
 
@@ -26,8 +27,8 @@ async def test_jalr_instruction(dut):
     expected_pc = rs1_value + i_type_imm
     expected_register_value = start_address + 4
 
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, jalr_instruction)
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = jalr_instruction
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
 

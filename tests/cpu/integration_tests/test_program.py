@@ -12,6 +12,7 @@ from cpu.utils import (
     gen_i_type_instruction,
     gen_b_type_instruction,
     gen_r_type_instruction,
+    write_instructions,
 )
 
 wait_ns = 1
@@ -33,11 +34,9 @@ async def test_sum_loop(dut):
         gen_i_type_instruction(OP_I_TYPE_ALU, 0, FUNC3_ALU_ADD_SUB, 0, 0), # addi $0, $0, 0 (nop)
     ]
 
-    # Set PC to 0 to fetch the first instruction
-    dut.cpu.r_PC.value = 0
-    # Load instructions into instruction memory
-    for i, instr in enumerate(instructions):
-        dut.cpu.instruction_memory.ram.mem[i].value = instr
+    start_address = 0x0
+    dut.cpu.r_PC.value = start_address
+    write_instructions(dut.cpu.instruction_memory.ram.mem, start_address, instructions)
 
     haltInstructions = 100
     endAddress = len(instructions) * 4

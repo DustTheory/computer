@@ -4,6 +4,7 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_s_type_instruction,
+    write_word_to_mem,
 )
 from cpu.constants import (
     FUNC3_LS_B,
@@ -24,12 +25,12 @@ async def test_sb_instruction(dut):
     rs2_value = 0x20
     imm_value = 0
     mem_address = rs1_value + imm_value
-    word_index = mem_address >> 2
+    word_index = mem_address  # now byte addressed; we will check the written byte directly
 
     sh_instruction = gen_s_type_instruction(FUNC3_LS_B, rs1, rs2, imm_value)
    
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = sh_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, sh_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
@@ -44,4 +45,4 @@ async def test_sb_instruction(dut):
     await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
 
     expected = rs2_value & 0xFF
-    assert dut.cpu.mem.ram.mem[word_index].value & 0xFF == expected, f"SB instruction failed: Memory word {word_index} low byte is {(dut.cpu.mem.ram.mem[word_index].value.integer & 0xFF):#010x}, expected {expected:#010x}"
+    assert dut.cpu.mem.ram.mem[word_index].value == expected, f"SB instruction failed: Memory byte {word_index} is {dut.cpu.mem.ram.mem[word_index].value.integer:#04x}, expected {expected:#04x}"

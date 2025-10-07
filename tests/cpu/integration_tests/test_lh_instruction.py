@@ -4,6 +4,8 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_i_type_instruction,
+    write_word_to_mem,
+    write_half_to_mem,
 )
 from cpu.constants import (
     OP_I_TYPE_LOAD,
@@ -23,14 +25,14 @@ async def test_lh_instruction_when_equal(dut):
     start_address = 0
     mem_value = 0xBEEF
 
-    dut.cpu.mem.ram.mem[start_address >> 2].value = mem_value & 0xFFFF
+    write_half_to_mem(dut.cpu.mem.ram.mem, start_address, mem_value & 0xFFFF)
 
     offset = 0
     lh_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_H, rs1, offset)
 
     dut.cpu.r_PC.value = 0
     dut.cpu.reg_file.Registers[rs1].value = start_address
-    dut.cpu.instruction_memory.ram.mem[0].value = lh_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, 0, lh_instruction)
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())

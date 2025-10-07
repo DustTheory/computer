@@ -4,6 +4,8 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_i_type_instruction,
+    write_word_to_mem,
+    write_byte_to_mem,
 )
 from cpu.constants import (
     OP_I_TYPE_LOAD,
@@ -26,13 +28,13 @@ async def test_lbu_instruction(dut):
     mem_address = rs1_value + offset
 
     # Initialize memory (byte stored in low 8 bits of word lane)
-    dut.cpu.mem.ram.mem[mem_address >> 2].value = mem_value & 0xFF
+    write_byte_to_mem(dut.cpu.mem.ram.mem, mem_address, mem_value & 0xFF)
 
     # Use utility to build the instruction rather than manual bit composition
     lbu_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_BU, rs1, offset)
 
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address >> 2].value = lbu_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, lbu_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")

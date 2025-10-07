@@ -4,6 +4,7 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_b_type_instruction,
+    write_word_to_mem,
 )
 from cpu.constants import (
     FUNC3_BRANCH_BGE,
@@ -23,7 +24,7 @@ async def test_bge_instruction_when_ge(dut):
     bge_instruction = gen_b_type_instruction(FUNC3_BRANCH_BGE, rs1, rs2, offset)
     expected_pc = start_address + offset
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = bge_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, bge_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
@@ -57,7 +58,7 @@ async def test_bge_instruction_when_lt(dut):
     bge_instruction = gen_b_type_instruction(FUNC3_BRANCH_BGE, rs1, rs2, offset)
     expected_pc = start_address + 4
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = bge_instruction
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, bge_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 

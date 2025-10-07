@@ -2,7 +2,7 @@ import cocotb
 from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
-from cpu.utils import gen_i_type_instruction
+from cpu.utils import gen_i_type_instruction, write_word_to_mem
 from cpu.constants import OP_I_TYPE_ALU, FUNC3_ALU_ADD_SUB, PIPELINE_CYCLES
 
 wait_ns = 1
@@ -20,9 +20,9 @@ async def test_addi_instruction(dut):
 
     instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_ADD_SUB, rs1, imm_value)
 
+    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, instruction)
     dut.cpu.r_PC.value = start_address
-    dut.cpu.instruction_memory.ram.mem[start_address>>2].value = instruction
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value & 0xFFFFFFFF
 
     clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
