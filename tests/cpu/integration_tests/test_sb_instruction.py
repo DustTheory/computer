@@ -25,7 +25,7 @@ async def test_sb_instruction(dut):
     rs2_value = 0x20
     imm_value = 0
     mem_address = rs1_value + imm_value
-    word_index = mem_address  # now byte addressed; we will check the written byte directly
+    word_index = mem_address
 
     sh_instruction = gen_s_type_instruction(FUNC3_LS_B, rs1, rs2, imm_value)
    

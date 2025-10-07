@@ -55,8 +55,6 @@ def gen_r_type_instruction(rd, funct3, rs1, rs2, funct7):
     instruction |= funct7 << 25
     return instruction
 
-# New helper utilities for byte-addressable test memory access
-
 def write_word_to_mem(mem_array, addr, value):
     """Write a 32-bit value into byte-addressable cocotb memory (little-endian)."""
     mem_array[addr + 0].value = (value >> 0) & 0xFF

@@ -28,7 +28,6 @@ async def test_memory(dut):
 
     data = [0x12345678, 0x9ABCDEF0, 0x0FEDCBA9, 0x87654321]
 
-    # Write each 32-bit word at a 4-byte boundary
     for i, w in enumerate(data):
         write_word_to_mem(dut.memory_axi.ram.mem, i * 4, w)
 
@@ -58,7 +57,6 @@ async def test_load_byte_unsigned(dut):
 
     data = [0x11, 0x22, 0x33, 0x44]
 
-    # Store bytes at addresses spaced by 4 so i_Addr = i*4 selects byte 0 of fetched word
     for i, b in enumerate(data):
         write_byte_to_mem(dut.memory_axi.ram.mem, i * 4, b)
 

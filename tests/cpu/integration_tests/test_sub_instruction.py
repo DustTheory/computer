@@ -41,7 +41,6 @@ async def test_sub_instruction(dut):
     for rs1_value, rs2_value, expected_result in tests:
         sub_instruction = gen_r_type_instruction(rd, FUNC3_ALU_ADD_SUB, rs1, rs2, 0b0100000)
 
-        # Reset between cases
         dut.cpu.i_Reset.value = 1
         await ClockCycles(dut.cpu.i_Clock, 1)
         dut.cpu.i_Reset.value = 0

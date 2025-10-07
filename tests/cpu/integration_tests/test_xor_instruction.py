@@ -29,7 +29,6 @@ async def test_xor_instruction(dut):
     for rs1_value, rs2_value, expected_result in tests:
         instruction = gen_r_type_instruction(rd, FUNC3_ALU_XOR, rs1, rs2, 0)
 
-        # Reset per test case
         dut.cpu.i_Reset.value = 1
         await ClockCycles(dut.cpu.i_Clock, 1)
         dut.cpu.i_Reset.value = 0

@@ -30,7 +30,6 @@ async def test_slli_instruction(dut):
     for rs1_value, imm_value, expected_result in tests:
         instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_SLL, rs1, imm_value)
 
-        # Reset
         dut.cpu.i_Reset.value = 1
         await ClockCycles(dut.cpu.i_Clock, 1)
         dut.cpu.i_Reset.value = 0
