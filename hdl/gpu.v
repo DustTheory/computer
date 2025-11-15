@@ -5,7 +5,7 @@ module gpu (
     input i_Uart_Tx_In,
     output o_Horizontal_Sync,
     output o_Vertical_Sync,
-    output [2:0] o_RGB,
+    output [11:0] o_RGB,
     output o_Write_Enable
 );
 
@@ -16,7 +16,7 @@ module gpu (
   localparam RESOLUTION_W = 640;
   localparam RESOLUTION_H = 480;
   localparam FRAMEBUFFER_DEPTH = RESOLUTION_W * RESOLUTION_H;
-  localparam BITS_PER_PIXEL = 4;
+  localparam BITS_PER_PIXEL = 12;
 
   wire w_Rx_DV;
   wire [7:0] w_Rx_Byte;

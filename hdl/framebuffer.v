@@ -12,12 +12,15 @@ module framebuffer #(
     output reg [BITS_PER_PIXEL-1:0] o_Read_Data
 );
 
-  (* ram_style = "block" *) reg [BITS_PER_PIXEL-1:0] Frame_Buffer[0:FRAMEBUFFER_DEPTH-1];
+  localparam FRAMEBUFFER_CUTOFF = 640 * 300;
+
+  (* ram_style = "block" *) reg [BITS_PER_PIXEL-1:0] Frame_Buffer[0:FRAMEBUFFER_CUTOFF-1];
 
   always @(posedge i_Clock) begin
-    if (i_Write_Enable) Frame_Buffer[i_Write_Addr] <= i_Write_Data;
+    if (i_Write_Enable && i_Write_Addr < FRAMEBUFFER_CUTOFF)
+      Frame_Buffer[i_Write_Addr] <= i_Write_Data;
 
-    o_Read_Data <= Frame_Buffer[i_Read_Addr];
+    o_Read_Data <= i_Read_Addr < FRAMEBUFFER_CUTOFF ? Frame_Buffer[i_Read_Addr] : 0;
   end
 
 endmodule

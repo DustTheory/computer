@@ -68,17 +68,36 @@ func main() {
 	var packet []byte
 
 	if opCode == op_FRAME {
-		packet = make([]byte, targetWidth*targetHeight+1)
+		packet = make([]byte, (targetWidth*targetHeight)*3+1)
 		packet[0] = byte(opCode)
 
 		for y := 0; y < targetHeight; y++ {
 			for x := 0; x < targetWidth; x++ {
 				r, g, b, _ := img.At(x, y).RGBA()
 
-				packet[y*targetWidth+x+1] = byte((r + g*2 + b) / 16384)
-				if packet[y*targetWidth+x+1] > 15 {
-					fmt.Printf("Warning: Pixel value %d at (%d,%d) exceeds 4-bit max. Clamping to 15.\n", packet[y*targetWidth+x+1], x, y)
-					packet[y*targetWidth+x+1] = 15
+				scaled_r := byte(r >> 12)
+				scaled_g := byte(g >> 12)
+				scaled_b := byte(b >> 12)
+
+				r_index := (y*targetWidth+x)*3 + 1
+				g_index := r_index + 1
+				b_index := r_index + 2
+
+				packet[r_index] = scaled_r
+				packet[g_index] = scaled_g
+				packet[b_index] = scaled_b
+
+				if scaled_r > 15 {
+					fmt.Printf("Warning: Pixel value %d at (%d,%d) exceeds 4-bit max. Clamping to 15.\n", scaled_r, x, y)
+					packet[r_index] = 15
+				}
+				if scaled_g > 15 {
+					fmt.Printf("Warning: Pixel value %d at (%d,%d) exceeds 4-bit max. Clamping to 15.\n", scaled_g, x, y)
+					packet[g_index] = 15
+				}
+				if scaled_b > 15 {
+					fmt.Printf("Warning: Pixel value %d at (%d,%d) exceeds 4-bit max. Clamping to 15.\n", scaled_b, x, y)
+					packet[b_index] = 15
 				}
 			}
 		}
