@@ -29,22 +29,22 @@ async def test_beq_instruction_when_equal(dut):
     expected_pc = start_address + offset
 
     dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, beq_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address, beq_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     max_cycles = 100
     for _ in range(max_cycles):
-        await RisingEdge(dut.cpu.i_Clock)
+        await RisingEdge(dut.i_Clock)
         if dut.cpu.r_PC.value.integer == expected_pc:
             break
     else:
@@ -67,22 +67,22 @@ async def test_beq_instruction_when_not_equal(dut):
     expected_pc = start_address + 4
 
     dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, beq_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address, beq_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     max_cycles = 100
     for _ in range(max_cycles):
-        await RisingEdge(dut.cpu.i_Clock)
+        await RisingEdge(dut.i_Clock)
         if dut.cpu.r_PC.value.integer == expected_pc:
             break
     else:

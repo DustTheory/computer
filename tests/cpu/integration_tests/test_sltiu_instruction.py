@@ -23,21 +23,21 @@ async def test_sltiu_instruction(dut):
         (0, 0, 0),
     ]
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
     for rs1_value, imm_value, expected_result in tests:
-        dut.cpu.i_Reset.value = 1
-        await ClockCycles(dut.cpu.i_Clock, 1)
-        dut.cpu.i_Reset.value = 0
-        await ClockCycles(dut.cpu.i_Clock, 1)
+        dut.i_Reset.value = 1
+        await ClockCycles(dut.i_Clock, 1)
+        dut.i_Reset.value = 0
+        await ClockCycles(dut.i_Clock, 1)
 
         instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_SLTU, rs1, imm_value)
-        write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, instruction)
+        write_word_to_mem(dut.instruction_ram.mem, start_address, instruction)
         dut.cpu.r_PC.value = start_address
         dut.cpu.reg_file.Registers[rs1].value = rs1_value & 0xFFFFFFFF
 
-        await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
+        await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 
         actual = dut.cpu.reg_file.Registers[rd].value.integer
         assert actual == expected_result, (

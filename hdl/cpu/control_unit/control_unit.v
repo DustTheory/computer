@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
-`include "./control_unit.vh"
-`include "../arithmetic_logic_unit/arithmetic_logic_unit.vh"
-`include "../comparator_unit/comparator_unit.vh"
-`include "../immediate_unit/immediate_unit.vh"
-`include "../memory/memory.vh"
+`include "control_unit.vh"
+`include "arithmetic_logic_unit.vh"
+`include "comparator_unit.vh"
+`include "immediate_unit.vh"
+`include "memory.vh"
 
 module control_unit (
     input i_Enable,

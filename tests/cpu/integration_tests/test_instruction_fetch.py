@@ -12,16 +12,16 @@ async def test_single_instruction_fetch(dut):
     dut._log.info("Starting instruction fetch test")
 
     test_instruction = 0x12345678
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, 0, test_instruction)
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, 4, 0x9ABCDEF0)
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, 8, 0x0FEDCBA9)
+    write_word_to_mem(dut.instruction_ram.mem, 0, test_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, 4, 0x9ABCDEF0)
+    write_word_to_mem(dut.instruction_ram.mem, 8, 0x0FEDCBA9)
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
 
     await RisingEdge(dut.cpu.w_Instruction_Valid)
 
@@ -40,15 +40,15 @@ async def test_multiple_instruction_fetch(dut):
         0xB16B00B5,
     ]
 
-    write_instructions(dut.cpu.instruction_memory.ram.mem, 0, instructions)
+    write_instructions(dut.instruction_ram.mem, 0, instructions)
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     for i in range(1):
         await RisingEdge(dut.cpu.w_Instruction_Valid)

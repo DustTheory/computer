@@ -24,22 +24,22 @@ async def test_jal_instruction(dut):
     jal_instruction |= dest_register << 7 
     jal_instruction |= magic_value << 12
 
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, jal_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address, jal_instruction)
     dut.cpu.r_PC.value = start_address
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     max_cycles = 200
     pc_reached = False
     reg_reached = False
     for _ in range(max_cycles):
-        await RisingEdge(dut.cpu.i_Clock)
+        await RisingEdge(dut.i_Clock)
         if not pc_reached and dut.cpu.r_PC.value.integer == expected_pc:
             pc_reached = True
         if dut.cpu.reg_file.Registers[dest_register].value.integer == expected_register_value:

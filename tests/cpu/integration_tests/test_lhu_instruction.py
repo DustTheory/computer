@@ -31,19 +31,19 @@ async def test_lhu_instruction(dut):
     lhu_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_HU, rs1, offset)
     
     dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, lhu_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address, lhu_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    write_half_to_mem(dut.cpu.mem.ram.mem, mem_address, mem_value & 0xFFFF)
+    write_half_to_mem(dut.data_ram.mem, mem_address, mem_value & 0xFFFF)
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
-    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
+    await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 
     expected_value = mem_value  # Should be zero-extended
     assert dut.cpu.reg_file.Registers[rd].value.integer == expected_value, f"LHU instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.integer:#010x}, expected {expected_value:#010x}"

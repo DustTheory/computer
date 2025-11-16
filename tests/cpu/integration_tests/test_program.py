@@ -36,21 +36,21 @@ async def test_sum_loop(dut):
 
     start_address = 0x0
     dut.cpu.r_PC.value = start_address
-    write_instructions(dut.cpu.instruction_memory.ram.mem, start_address, instructions)
+    write_instructions(dut.instruction_ram.mem, start_address, instructions)
 
     haltInstructions = 100
     endAddress = len(instructions) * 4
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
 
     while dut.cpu.r_PC.value.integer < endAddress and haltInstructions > 0:
 
-        await ClockCycles(dut.cpu.i_Clock, 4)
+        await ClockCycles(dut.i_Clock, 4)
         haltInstructions -= 1
 
     # After executing the program, $v0 should contain the sum of first 10 natural numbers

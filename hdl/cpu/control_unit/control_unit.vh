@@ -1,4 +1,4 @@
-`include "../cpu_core_params.vh"
+`include "cpu_core_params.vh"
 
 `ifndef CU_PARAMS_VH
 `define CU_PARAMS_VH
