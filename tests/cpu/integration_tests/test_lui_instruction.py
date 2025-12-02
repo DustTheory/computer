@@ -5,6 +5,7 @@ from cocotb.clock import Clock
 from cpu.constants import (
     OP_U_TYPE_LUI,
     PIPELINE_CYCLES,
+    ROM_BOUNDARY_ADDR,
 )
 from cpu.utils import write_word_to_mem
 
@@ -14,7 +15,7 @@ wait_ns = 1
 async def test_lui_instruction(dut):
     """Test LUI instruction"""
 
-    start_address = 0x0
+    start_address =  ROM_BOUNDARY_ADDR + 0x0
     lui_instruction = OP_U_TYPE_LUI
     lui_instruction |= 1 << 7
     lui_instruction |= 0x12345 << 12

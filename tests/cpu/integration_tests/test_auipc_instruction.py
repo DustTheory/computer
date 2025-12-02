@@ -6,6 +6,8 @@ from cpu.constants import (
     OP_U_TYPE_AUIPC,
 
     PIPELINE_CYCLES,
+
+    ROM_BOUNDARY_ADDR,
 )
 from cpu.utils import write_word_to_mem
 
@@ -16,7 +18,7 @@ async def test_auipc_instruction(dut):
     """Test AUIPC instruction"""
 
     dest_register = 22
-    start_address = 512
+    start_address =  ROM_BOUNDARY_ADDR + 512
     magic_value = 0x12345
 
     auipc_instruction = OP_U_TYPE_AUIPC

@@ -12,6 +12,8 @@ from cpu.constants import (
     FUNC3_LS_W,
 
     PIPELINE_CYCLES,
+
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -19,7 +21,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_lw_instruction(dut):
     """Test lw instruction"""
-    start_address = 64
+    start_address =  ROM_BOUNDARY_ADDR + 64
     rd = 5
     rs1 = 6
     rs1_value = 0

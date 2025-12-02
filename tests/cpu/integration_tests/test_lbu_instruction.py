@@ -11,6 +11,7 @@ from cpu.constants import (
     OP_I_TYPE_LOAD,
     FUNC3_LS_BU,
     PIPELINE_CYCLES,
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -21,7 +22,7 @@ async def test_lbu_instruction(dut):
 
     rd = 5
     rs1 = 2
-    start_address = 0
+    start_address =  ROM_BOUNDARY_ADDR + 0
     rs1_value = 0
     offset = 0
     mem_value = 0xAB

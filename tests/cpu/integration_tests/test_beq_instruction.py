@@ -8,6 +8,7 @@ from cpu.utils import (
 )
 from cpu.constants import (
     FUNC3_BRANCH_BEQ,
+    ROM_BOUNDARY_ADDR
 )
 
 wait_ns = 1
@@ -17,7 +18,7 @@ wait_ns = 1
 async def test_beq_instruction_when_equal(dut):
     """Test BEQ instruction"""
 
-    start_address = 16
+    start_address =  ROM_BOUNDARY_ADDR + 16
     rs1 = 2
     rs1_value = 0x200
     rs2 = 3
@@ -56,7 +57,7 @@ async def test_beq_instruction_when_equal(dut):
 async def test_beq_instruction_when_not_equal(dut):
     """Test BEQ instruction"""
 
-    start_address = 16
+    start_address =  ROM_BOUNDARY_ADDR + 16
     rs1 = 2
     rs1_value = 0x200
     rs2 = 3

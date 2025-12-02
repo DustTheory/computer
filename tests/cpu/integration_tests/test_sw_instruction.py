@@ -10,6 +10,8 @@ from cpu.constants import (
     FUNC3_LS_W,
 
     PIPELINE_CYCLES,
+
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -17,7 +19,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_sw_instruction(dut):
     """Test sw instruction"""
-    start_address = 0
+    start_address =  ROM_BOUNDARY_ADDR + 0
     rs1 = 0x6
     rs2 = 0x7
     rs1_value = 0

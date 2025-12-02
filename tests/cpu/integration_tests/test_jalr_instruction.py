@@ -7,6 +7,7 @@ from cpu.utils import (
 )
 from cpu.constants import (
     OP_I_TYPE_JALR,
+    ROM_BOUNDARY_ADDR,
 )
 from cpu.utils import write_word_to_mem
 
@@ -17,7 +18,7 @@ wait_ns = 1
 async def test_jalr_instruction(dut):
     """Test JALR instruction"""
 
-    start_address = 256
+    start_address =  ROM_BOUNDARY_ADDR + 256
     dest_register = 1
     rs1 = 2
     rs1_value = 0x200

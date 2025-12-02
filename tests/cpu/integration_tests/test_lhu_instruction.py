@@ -13,6 +13,8 @@ from cpu.constants import (
     FUNC3_LS_HU,
 
     PIPELINE_CYCLES,
+    
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -20,7 +22,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_lhu_instruction(dut):
     """Test lhu instruction (unsigned halfword load)"""
-    start_address = 96
+    start_address =  ROM_BOUNDARY_ADDR + 96
     rd = 9
     rs1 = 10
     rs1_value = 400

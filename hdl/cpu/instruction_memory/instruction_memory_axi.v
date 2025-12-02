@@ -6,7 +6,7 @@ module instruction_memory_axi (
     input i_Clock,
     input i_Enable,
     input [XLEN-1:0] i_Instruction_Addr,
-    output [XLEN-1:0] o_Instruction,
+    output reg [XLEN-1:0] o_Instruction,
     output o_Instruction_Valid,
 
     // AXI INTERFACE
@@ -28,6 +28,12 @@ module instruction_memory_axi (
     output s_axil_bready
 );
 
+  reg [31:0] rom [0:1023]; // 4KB ROM Instruction Memory
+
+  initial begin
+    $readmemh("instruction_memory.mem", rom);
+  end
+
   localparam IDLE = 2'b00;
   localparam READ_SUBMITTING = 2'b01;
   localparam READ_AWAITING = 2'b10;
@@ -41,7 +47,11 @@ module instruction_memory_axi (
     end else if (i_Enable) begin
       case (r_State)
         IDLE: begin
-          r_State <= READ_SUBMITTING;
+          if (i_Instruction_Addr > 32'hFFF) begin
+            r_State <= READ_SUBMITTING;
+          end else begin
+            r_State <= READ_SUCCESS;
+          end
         end
         READ_SUBMITTING: begin
           if (s_axil_arready) begin
@@ -64,7 +74,17 @@ module instruction_memory_axi (
   end
 
   assign o_Instruction_Valid = (r_State == READ_SUCCESS);
-  assign o_Instruction = (r_State == READ_SUCCESS) ? s_axil_rdata : 0;
+
+  always @(*) begin
+    if (i_Instruction_Addr <= 32'hFFF) begin
+      o_Instruction = rom[i_Instruction_Addr[11:2]];
+    end else if (r_State == READ_SUCCESS) begin
+      o_Instruction = s_axil_rdata;
+    end else begin
+      o_Instruction = 32'b0;
+    end
+
+  end
 
   assign s_axil_araddr = i_Instruction_Addr[31:0];
   assign s_axil_arvalid = (r_State == READ_SUBMITTING);

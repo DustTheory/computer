@@ -3,7 +3,7 @@ from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
 from cpu.utils import gen_r_type_instruction, write_word_to_mem
-from cpu.constants import FUNC3_ALU_SLL, PIPELINE_CYCLES
+from cpu.constants import FUNC3_ALU_SLL, PIPELINE_CYCLES, ROM_BOUNDARY_ADDR
 
 wait_ns = 1
 
@@ -19,7 +19,7 @@ async def test_sll_instruction(dut):
         (0xFFFFFFFF, 1, 0xFFFFFFFE),
     ]
 
-    start_address = 0x0
+    start_address =  ROM_BOUNDARY_ADDR + 0x0
     rs1 = 1
     rs2 = 2
     rd = 3

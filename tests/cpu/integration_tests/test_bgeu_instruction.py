@@ -8,6 +8,7 @@ from cpu.utils import (
 )
 from cpu.constants import (
     FUNC3_BRANCH_BGEU,
+    ROM_BOUNDARY_ADDR
 )
 
 wait_ns = 1
@@ -15,7 +16,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_bgeu_instruction_when_geu(dut):
     """Test BGEU instruction: rs1 >= rs2 (unsigned)"""
-    start_address = 16
+    start_address =  ROM_BOUNDARY_ADDR + 16
     rs1 = 2
     rs1_value = 0xFFFFFFFF
     rs2 = 3
@@ -49,7 +50,7 @@ async def test_bgeu_instruction_when_geu(dut):
 @cocotb.test()
 async def test_bgeu_instruction_when_ltu(dut):
     """Test BGEU instruction: rs1 < rs2 (unsigned)"""
-    start_address = 16
+    start_address =  ROM_BOUNDARY_ADDR + 16
     rs1 = 2
     rs1_value = 0x100
     rs2 = 3

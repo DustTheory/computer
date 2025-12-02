@@ -9,7 +9,9 @@ from cpu.utils import (
 from cpu.constants import (
     PIPELINE_CYCLES,
 
-    FUNC3_ALU_ADD_SUB
+    FUNC3_ALU_ADD_SUB,
+
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -30,7 +32,7 @@ async def test_sub_instruction(dut):
         (0x0, 0x1, -0x1),  # Wrap around case
     ]
 
-    start_address = 0x0
+    start_address =  ROM_BOUNDARY_ADDR + 0x0
     rs1 = 1
     rs2 = 2
     rd = 3

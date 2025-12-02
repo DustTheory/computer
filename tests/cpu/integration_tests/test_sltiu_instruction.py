@@ -3,7 +3,7 @@ from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
 from cpu.utils import gen_i_type_instruction, write_word_to_mem
-from cpu.constants import OP_I_TYPE_ALU, FUNC3_ALU_SLTU, PIPELINE_CYCLES
+from cpu.constants import OP_I_TYPE_ALU, FUNC3_ALU_SLTU, PIPELINE_CYCLES, ROM_BOUNDARY_ADDR
 
 wait_ns = 1
 
@@ -11,7 +11,7 @@ wait_ns = 1
 async def test_sltiu_instruction(dut):
     """Test sltiu instruction"""
 
-    start_address = 0x0
+    start_address =  ROM_BOUNDARY_ADDR + 0x0
     rs1 = 1
     rd = 3
 

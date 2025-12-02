@@ -7,6 +7,8 @@ from cpu.constants import (
 
     FUNC3_BRANCH_BLT,
     FUNC3_ALU_ADD_SUB,
+    
+    ROM_BOUNDARY_ADDR,
 )
 from cpu.utils import (
     gen_i_type_instruction,
@@ -34,12 +36,12 @@ async def test_sum_loop(dut):
         gen_i_type_instruction(OP_I_TYPE_ALU, 0, FUNC3_ALU_ADD_SUB, 0, 0), # addi $0, $0, 0 (nop)
     ]
 
-    start_address = 0x0
+    start_address =  ROM_BOUNDARY_ADDR + 0x0
     dut.cpu.r_PC.value = start_address
     write_instructions(dut.instruction_ram.mem, start_address, instructions)
 
     haltInstructions = 100
-    endAddress = len(instructions) * 4
+    endAddress = ROM_BOUNDARY_ADDR + len(instructions) * 4
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())

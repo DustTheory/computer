@@ -13,6 +13,8 @@ from cpu.constants import (
     FUNC3_LS_B,
 
     PIPELINE_CYCLES,
+
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -22,7 +24,7 @@ wait_ns = 1
 async def test_lb_instruction_when_equal(dut):
     """Test lb instruction"""
 
-    start_address = 0
+    start_address =  ROM_BOUNDARY_ADDR + 0
     rd = 1
     rs1 = 2
     rs1_value = 0

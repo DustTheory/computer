@@ -2,6 +2,8 @@ from cpu.constants import (
     OP_B_TYPE,
     OP_S_TYPE,
     OP_R_TYPE,
+
+    ROM_BOUNDARY_ADDR,
 )
 
 def gen_i_type_instruction(opcode, rd, funct3, rs1, imm):
@@ -71,5 +73,13 @@ def write_byte_to_mem(mem_array, addr, value):
 
 def write_instructions(mem_array, base_addr, instructions):
     """Write a list of 32-bit instructions at word stride (4 bytes)."""
+    if base_addr < ROM_BOUNDARY_ADDR:
+        raise ValueError(f"Base address {base_addr:#06x} is inside of ROM boundary.")
     for i, ins in enumerate(instructions):
         write_word_to_mem(mem_array, base_addr + 4*i, ins)
+
+def write_instructions_rom(mem_array, base_addr, instructions):
+    if base_addr > ROM_BOUNDARY_ADDR:
+        raise ValueError(f"Base address {base_addr:#06x} is outside of ROM boundary.")
+    for i, ins in enumerate(instructions):
+        mem_array[base_addr//4 + i].value = ins

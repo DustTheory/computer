@@ -89,3 +89,5 @@ REG_WRITE_NONE = 5
 
 # Number of cycles the pipeline takes to complete an instruction
 PIPELINE_CYCLES = 13
+
+ROM_BOUNDARY_ADDR = 0x1000 # 4kB
