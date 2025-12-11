@@ -29,15 +29,15 @@ async def test_memory(dut):
     data = [0x12345678, 0x9ABCDEF0, 0x0FEDCBA9, 0x87654321]
 
     for i, w in enumerate(data):
-        write_word_to_mem(dut.memory_axi.ram.mem, i * 4, w)
+        write_word_to_mem(dut.data_ram.mem, i * 4, w)
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
 
     for data_index in range(2):
@@ -58,17 +58,17 @@ async def test_load_byte_unsigned(dut):
     data = [0x11, 0x22, 0x33, 0x44]
 
     for i, b in enumerate(data):
-        write_byte_to_mem(dut.memory_axi.ram.mem, i * 4, b)
+        write_byte_to_mem(dut.data_ram.mem, i * 4, b)
 
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_LOAD_BYTE_UNSIGNED
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
 
     for i in range(4):
@@ -87,17 +87,17 @@ async def test_load_byte(dut):
     data = [-0x55, 0x7F, -0x80, 0x00]  # 0xAB, 0x7F, 0x80, 0x00 (first negative example)
 
     for i, v in enumerate(data):
-        write_byte_to_mem(dut.memory_axi.ram.mem, i * 4, v & 0xFF)
+        write_byte_to_mem(dut.data_ram.mem, i * 4, v & 0xFF)
 
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_LOAD_BYTE
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     for i in range(4):
         dut.memory_axi.i_Addr.value = i * 4
@@ -115,17 +115,17 @@ async def test_load_half_unsigned(dut):
     data = [0xAABB, 0xCCDD]
 
     for i, h in enumerate(data):
-        write_half_to_mem(dut.memory_axi.ram.mem, i * 4, h)
+        write_half_to_mem(dut.data_ram.mem, i * 4, h)
 
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_LOAD_HALF_UNSIGNED
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     for i in range(2):
         dut.memory_axi.i_Addr.value = i*4
@@ -142,17 +142,17 @@ async def test_load_half(dut):
 
     data = [-21846, 32767]  # 0xAABB, 0x7FFF
     for i, h in enumerate(data):
-        write_half_to_mem(dut.memory_axi.ram.mem, i * 4, h & 0xFFFF)
+        write_half_to_mem(dut.data_ram.mem, i * 4, h & 0xFFFF)
     
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_LOAD_HALF
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     for i in range(2):
         dut.memory_axi.i_Addr.value = i * 4
@@ -169,19 +169,19 @@ async def test_load_word(dut):
 
     data = 0xAABBCCDD
 
-    write_word_to_mem(dut.memory_axi.ram.mem, 0, 0xAABBCCDD)
+    write_word_to_mem(dut.data_ram.mem, 0, 0xAABBCCDD)
 
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_LOAD_WORD
 
     dut.memory_axi.i_Addr.value = 0
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     await RisingEdge(dut.w_Mem_ready)
 
@@ -199,13 +199,13 @@ async def test_store_byte(dut):
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_STORE_BYTE
     dut.memory_axi.i_Write_Enable.value = 1
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     for i in range(4):
         dut.memory_axi.i_Addr.value = i * 4
@@ -216,7 +216,7 @@ async def test_store_byte(dut):
         for j in range(8):  # trim debug noise
             pass
 
-        value = dut.memory_axi.ram.mem[i * 4].value.integer
+        value = dut.data_ram.mem[i * 4].value.integer
         expected = data[i] & 0xFF
         assert value == expected, f"Store byte failed at address {i*4}: got {value:#04x}, expected {expected:#04x}"
 
@@ -229,13 +229,13 @@ async def test_store_half(dut):
     dut.memory_axi.i_Load_Store_Type.value = LS_TYPE_STORE_HALF
     dut.memory_axi.i_Write_Enable.value = 1
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     for i in range(2):
         dut.memory_axi.i_Addr.value = i * 4
@@ -243,8 +243,8 @@ async def test_store_half(dut):
 
         await RisingEdge(dut.w_Mem_ready)
 
-        low  = dut.memory_axi.ram.mem[i * 4].value.integer
-        high = dut.memory_axi.ram.mem[i * 4 + 1].value.integer
+        low  = dut.data_ram.mem[i * 4].value.integer
+        high = dut.data_ram.mem[i * 4 + 1].value.integer
         value = low | (high << 8)
         expected = data[i] & 0xFFFF
         assert value == expected, f"Store half failed at base address {i*4}: got {value:#06x}, expected {expected:#06x}"
@@ -262,20 +262,20 @@ async def test_store_word(dut):
     dut.memory_axi.i_Addr.value = 0
     dut.memory_axi.i_Data.value = data & 0xFFFFFFFF
 
-    clock = Clock(dut.memory_axi.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
     
-    dut.memory_axi.i_Reset.value = 1
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
-    dut.memory_axi.i_Reset.value = 0
-    await ClockCycles(dut.memory_axi.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     await RisingEdge(dut.w_Mem_ready)
 
-    b0 = dut.memory_axi.ram.mem[0].value.integer
-    b1 = dut.memory_axi.ram.mem[1].value.integer
-    b2 = dut.memory_axi.ram.mem[2].value.integer
-    b3 = dut.memory_axi.ram.mem[3].value.integer
+    b0 = dut.data_ram.mem[0].value.integer
+    b1 = dut.data_ram.mem[1].value.integer
+    b2 = dut.data_ram.mem[2].value.integer
+    b3 = dut.data_ram.mem[3].value.integer
     value = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
     expected = data & 0xFFFFFFFF
     assert value == expected, f"Store word failed: got {value:#010x}, expected {expected:#010x}"

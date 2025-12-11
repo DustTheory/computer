@@ -7,6 +7,8 @@ from cpu.constants import (
 
     FUNC3_BRANCH_BLT,
     FUNC3_ALU_ADD_SUB,
+    
+    ROM_BOUNDARY_ADDR,
 )
 from cpu.utils import (
     gen_i_type_instruction,
@@ -34,23 +36,23 @@ async def test_sum_loop(dut):
         gen_i_type_instruction(OP_I_TYPE_ALU, 0, FUNC3_ALU_ADD_SUB, 0, 0), # addi $0, $0, 0 (nop)
     ]
 
-    start_address = 0x0
+    start_address =  ROM_BOUNDARY_ADDR + 0x0
     dut.cpu.r_PC.value = start_address
-    write_instructions(dut.cpu.instruction_memory.ram.mem, start_address, instructions)
+    write_instructions(dut.instruction_ram.mem, start_address, instructions)
 
     haltInstructions = 100
-    endAddress = len(instructions) * 4
+    endAddress = ROM_BOUNDARY_ADDR + len(instructions) * 4
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
 
     while dut.cpu.r_PC.value.integer < endAddress and haltInstructions > 0:
 
-        await ClockCycles(dut.cpu.i_Clock, 4)
+        await ClockCycles(dut.i_Clock, 4)
         haltInstructions -= 1
 
     # After executing the program, $v0 should contain the sum of first 10 natural numbers

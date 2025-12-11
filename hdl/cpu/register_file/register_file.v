@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "../cpu_core_params.vh"
+`include "cpu_core_params.vh"
 
 module register_file (
     input i_Enable,

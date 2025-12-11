@@ -11,6 +11,7 @@ from cpu.constants import (
     OP_I_TYPE_LOAD,
     FUNC3_LS_BU,
     PIPELINE_CYCLES,
+    ROM_BOUNDARY_ADDR,
 )
 
 wait_ns = 1
@@ -21,27 +22,27 @@ async def test_lbu_instruction(dut):
 
     rd = 5
     rs1 = 2
-    start_address = 0
+    start_address =  ROM_BOUNDARY_ADDR + 0
     rs1_value = 0
     offset = 0
     mem_value = 0xAB
     mem_address = rs1_value + offset
 
-    write_byte_to_mem(dut.cpu.mem.ram.mem, mem_address, mem_value & 0xFF)
+    write_byte_to_mem(dut.data_ram.mem, mem_address, mem_value & 0xFF)
 
     lbu_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_BU, rs1, offset)
 
     dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, lbu_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address, lbu_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, PIPELINE_CYCLES)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 
     result = dut.cpu.reg_file.Registers[rd].value.integer
     assert result == mem_value, f"LBU instruction failed: Rd value is {result:#010x}, expected {mem_value:#010x}"

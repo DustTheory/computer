@@ -1,10 +1,48 @@
 `timescale 1ns / 1ps
 `include "cpu_core_params.vh"
-`include "memory/memory.vh"
+`include "memory.vh"
 
 module cpu (
     input i_Reset,
-    input i_Clock
+    input i_Clock,
+    input i_Init_Calib_Complete,
+    output [3:0] o_PC,
+
+    // AXI INTERFACE FOR DATA MEMORY
+    output [31:0] s_data_memory_axil_araddr,
+    output s_data_memory_axil_arvalid,
+    input s_data_memory_axil_arready,
+    input [31:0] s_data_memory_axil_rdata,
+    input s_data_memory_axil_rvalid,
+    output s_data_memory_axil_rready,
+    output [31:0] s_data_memory_axil_awaddr,
+    output s_data_memory_axil_awvalid,
+    input s_data_memory_axil_awready,
+    output [31:0] s_data_memory_axil_wdata,
+    output [3:0] s_data_memory_axil_wstrb,
+    output s_data_memory_axil_wvalid,
+    input s_data_memory_axil_wready,
+    input [1:0] s_data_memory_axil_bresp,
+    input s_data_memory_axil_bvalid,
+    output s_data_memory_axil_bready,
+
+    // AXI INTERFACE FOR INSTRUCTION MEMORY
+    output [31:0] s_instruction_memory_axil_araddr,
+    output s_instruction_memory_axil_arvalid,
+    input s_instruction_memory_axil_arready,
+    input [31:0] s_instruction_memory_axil_rdata,
+    input s_instruction_memory_axil_rvalid,
+    output s_instruction_memory_axil_rready,
+    output [31:0] s_instruction_memory_axil_awaddr,
+    output s_instruction_memory_axil_awvalid,
+    input s_instruction_memory_axil_awready,
+    output [31:0] s_instruction_memory_axil_wdata,
+    output [3:0] s_instruction_memory_axil_wstrb,
+    output s_instruction_memory_axil_wvalid,
+    input s_instruction_memory_axil_wready,
+    input [1:0] s_instruction_memory_axil_bresp,
+    input s_instruction_memory_axil_bvalid,
+    output s_instruction_memory_axil_bready
 );
 
   wire w_Instruction_Valid;
@@ -47,6 +85,38 @@ module cpu (
   wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Instruction[19:15];
   wire [REG_ADDR_WIDTH-1:0] w_Rs_2 = w_Instruction[24:20];
 
+  // Stage2 (Memory/Wait) pipeline registers
+  reg r_S2_Valid;
+  reg [LS_SEL_WIDTH:0] r_S2_Load_Store_Type;
+  reg r_S2_Mem_Write_Enable;
+  reg [XLEN-1:0] r_S2_Alu_Result;
+  reg [XLEN-1:0] r_S2_Store_Data;
+  reg [REG_ADDR_WIDTH-1:0] r_S2_Rd;
+  reg r_S2_Rd_Write_Enable;
+  reg [REG_ADDR_WIDTH-1:0] r_S2_Wb_Src;
+  reg [XLEN-1:0] r_S2_Immediate;
+  reg [XLEN-1:0] r_S2_PC_Next;
+  reg [XLEN-1:0] r_S2_PC_Fetch;
+  reg r_S2_Compare_Result;
+  reg [XLEN-1:0] r_S2_Load_Data;
+
+  // Stage3 (Writeback) pipeline registers
+  reg r_S3_Valid;
+  reg [LS_SEL_WIDTH:0] r_S3_Load_Store_Type;
+  reg [XLEN-1:0] r_S3_Alu_Result;
+  reg [REG_ADDR_WIDTH-1:0] r_S3_Rd;
+  reg r_S3_Rd_Write_Enable;
+  reg [REG_ADDR_WIDTH-1:0] r_S3_Wb_Src;
+  reg [XLEN-1:0] r_S3_Immediate;
+  reg [XLEN-1:0] r_S3_PC_Next;
+  reg [XLEN-1:0] r_S3_PC_Fetch;
+  reg r_S3_Compare_Result;
+  reg [XLEN-1:0] r_S3_Load_Data;
+  wire w_S3_Is_Load = f_Is_Load(r_S3_Load_Store_Type);
+  wire w_S3_Is_Store = f_Is_Store(r_S3_Load_Store_Type);
+
+  reg [XLEN-1:0] w_Wb_Data;
+  wire w_Wb_Enable   = r_S3_Valid && r_S3_Rd_Write_Enable && !w_S3_Is_Store && (!w_S3_Is_Load || 1'b1);
 
 
   /*----------------PIPELINE STAGE 1----------------*/
@@ -107,89 +177,93 @@ module cpu (
   instruction_memory_axi instruction_memory (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
+      .i_Enable(i_Init_Calib_Complete),
       .i_Instruction_Addr(r_PC),
       .o_Instruction(w_Instruction),
-      .o_Instruction_Valid(w_Instruction_Valid)
+      .o_Instruction_Valid(w_Instruction_Valid),
+      .s_axil_araddr(s_instruction_memory_axil_araddr),
+      .s_axil_arvalid(s_instruction_memory_axil_arvalid),
+      .s_axil_arready(s_instruction_memory_axil_arready),
+      .s_axil_rdata(s_instruction_memory_axil_rdata),
+      .s_axil_rvalid(s_instruction_memory_axil_rvalid),
+      .s_axil_rready(s_instruction_memory_axil_rready),
+      .s_axil_awaddr(s_instruction_memory_axil_awaddr),
+      .s_axil_awvalid(s_instruction_memory_axil_awvalid),
+      .s_axil_awready(s_instruction_memory_axil_awready),
+      .s_axil_wdata(s_instruction_memory_axil_wdata),
+      .s_axil_wstrb(s_instruction_memory_axil_wstrb),
+      .s_axil_wvalid(s_instruction_memory_axil_wvalid),
+      .s_axil_wready(s_instruction_memory_axil_wready),
+      .s_axil_bresp(s_instruction_memory_axil_bresp),
+      .s_axil_bvalid(s_instruction_memory_axil_bvalid),
+      .s_axil_bready(s_instruction_memory_axil_bready)
   );
 
 
   /*----------------PIPELINE STAGE 2----------------*/
 
-
-  // Stage2 (Memory/Wait) pipeline registers
-  reg                r_S2_Valid;
-  reg [LS_SEL_WIDTH:0] r_S2_Load_Store_Type;
-  reg                r_S2_Mem_Write_Enable;
-  reg [XLEN-1:0]     r_S2_Alu_Result;
-  reg [XLEN-1:0]     r_S2_Store_Data;
-  reg [REG_ADDR_WIDTH-1:0] r_S2_Rd;
-  reg                r_S2_Rd_Write_Enable;
-  reg [REG_ADDR_WIDTH-1:0] r_S2_Wb_Src;
-  reg [XLEN-1:0]     r_S2_Immediate;
-  reg [XLEN-1:0]     r_S2_PC_Next;
-  reg [XLEN-1:0]     r_S2_PC_Fetch;
-  reg                r_S2_Compare_Result;
-  reg [XLEN-1:0]     r_S2_Load_Data;
-
-  // Stage3 (Writeback) pipeline registers
-  reg                r_S3_Valid;
-  reg [LS_SEL_WIDTH:0] r_S3_Load_Store_Type;
-  reg [XLEN-1:0]     r_S3_Alu_Result;
-  reg [REG_ADDR_WIDTH-1:0] r_S3_Rd;
-  reg                r_S3_Rd_Write_Enable;
-  reg [REG_ADDR_WIDTH-1:0] r_S3_Wb_Src;
-  reg [XLEN-1:0]     r_S3_Immediate;
-  reg [XLEN-1:0]     r_S3_PC_Next;
-  reg [XLEN-1:0]     r_S3_PC_Fetch;
-  reg                r_S3_Compare_Result;
-  reg [XLEN-1:0]     r_S3_Load_Data;
-
   wire [MEMORY_STATE_WIDTH:0] w_Memory_State;
 
-  function automatic bit f_Is_Load(input [LS_SEL_WIDTH:0] v);
+  function reg f_Is_Load(input [LS_SEL_WIDTH:0] v);
     begin
       case (v)
         LS_TYPE_LOAD_WORD,
         LS_TYPE_LOAD_HALF,
         LS_TYPE_LOAD_HALF_UNSIGNED,
         LS_TYPE_LOAD_BYTE,
-        LS_TYPE_LOAD_BYTE_UNSIGNED: f_Is_Load = 1'b1;
+        LS_TYPE_LOAD_BYTE_UNSIGNED:
+        f_Is_Load = 1'b1;
         default: f_Is_Load = 1'b0;
       endcase
     end
   endfunction
 
-  function automatic bit f_Is_Store(input [LS_SEL_WIDTH:0] v);
+  function reg f_Is_Store(input [LS_SEL_WIDTH:0] v);
     begin
       case (v)
-        LS_TYPE_STORE_WORD,
-        LS_TYPE_STORE_HALF,
-        LS_TYPE_STORE_BYTE: f_Is_Store = 1'b1;
+        LS_TYPE_STORE_WORD, LS_TYPE_STORE_HALF, LS_TYPE_STORE_BYTE: f_Is_Store = 1'b1;
         default: f_Is_Store = 1'b0;
       endcase
     end
   endfunction
 
-  wire w_S2_Is_Load  = r_S2_Valid && f_Is_Load(r_S2_Load_Store_Type);
+  wire w_S2_Is_Load = r_S2_Valid && f_Is_Load(r_S2_Load_Store_Type);
   wire w_S2_Is_Store = r_S2_Valid && f_Is_Store(r_S2_Load_Store_Type);
 
   // Memory state helper flags
-  wire w_Mem_Read_Done  = (w_Memory_State == READ_SUCCESS);
+  wire w_Mem_Read_Done = (w_Memory_State == READ_SUCCESS);
   wire w_Mem_Write_Done = (w_Memory_State == WRITE_SUCCESS);
-  wire w_Mem_Busy       = (w_Memory_State != IDLE);
+  wire w_Mem_Busy = (w_Memory_State != IDLE);
 
-  wire w_Stall_S1 = r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done);
+  wire w_Stall_S1 = !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
 
   // Memory interface driven from S2
   memory_axi mem (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
+      .i_Enable(i_Init_Calib_Complete),
       .i_Load_Store_Type(r_S2_Load_Store_Type),
       .i_Write_Enable(r_S2_Mem_Write_Enable),
       .i_Addr(r_S2_Alu_Result),
       .i_Data(r_S2_Store_Data),
       .o_Data(w_Dmem_Data),
-      .o_State(w_Memory_State)
+      .o_State(w_Memory_State),
+      .s_axil_araddr(s_data_memory_axil_araddr),
+      .s_axil_arvalid(s_data_memory_axil_arvalid),
+      .s_axil_arready(s_data_memory_axil_arready),
+      .s_axil_rdata(s_data_memory_axil_rdata),
+      .s_axil_rvalid(s_data_memory_axil_rvalid),
+      .s_axil_rready(s_data_memory_axil_rready),
+      .s_axil_awaddr(s_data_memory_axil_awaddr),
+      .s_axil_awvalid(s_data_memory_axil_awvalid),
+      .s_axil_awready(s_data_memory_axil_awready),
+      .s_axil_wdata(s_data_memory_axil_wdata),
+      .s_axil_wstrb(s_data_memory_axil_wstrb),
+      .s_axil_wvalid(s_data_memory_axil_wvalid),
+      .s_axil_wready(s_data_memory_axil_wready),
+      .s_axil_bresp(s_data_memory_axil_bresp),
+      .s_axil_bvalid(s_data_memory_axil_bvalid),
+      .s_axil_bready(s_data_memory_axil_bready)
   );
 
   // Pipeline progression
@@ -203,8 +277,7 @@ module cpu (
       r_S3_Rd_Write_Enable <= 1'b0;
     end else begin
       // Capture load data when ready
-      if (w_Mem_Read_Done && w_S2_Is_Load)
-        r_S2_Load_Data <= w_Dmem_Data;
+      if (w_Mem_Read_Done && w_S2_Is_Load) r_S2_Load_Data <= w_Dmem_Data;
 
       if (!w_Stall_S1) begin
         // S2 -> S3
@@ -215,13 +288,11 @@ module cpu (
         r_S3_Rd_Write_Enable <= r_S2_Rd_Write_Enable;
         r_S3_Wb_Src          <= r_S2_Wb_Src;
         r_S3_Immediate       <= r_S2_Immediate;
-  r_S3_PC_Next         <= r_S2_PC_Next;
-  r_S3_PC_Fetch        <= r_S2_PC_Fetch;
+        r_S3_PC_Next         <= r_S2_PC_Next;
+        r_S3_PC_Fetch        <= r_S2_PC_Fetch;
         r_S3_Compare_Result  <= r_S2_Compare_Result;
-        if (w_Mem_Read_Done && w_S2_Is_Load)
-          r_S3_Load_Data <= w_Dmem_Data;
-        else
-          r_S3_Load_Data <= r_S2_Load_Data;
+        if (w_Mem_Read_Done && w_S2_Is_Load) r_S3_Load_Data <= w_Dmem_Data;
+        else r_S3_Load_Data <= r_S2_Load_Data;
 
         // Stage1 -> S2 capture (new instruction)
         r_S2_Valid            <= w_Instruction_Valid;
@@ -242,7 +313,6 @@ module cpu (
     end
   end
 
-  reg [XLEN-1:0] w_Wb_Data;
   always @* begin
     case (r_S3_Wb_Src)
       REG_WRITE_ALU:     w_Wb_Data = r_S3_Alu_Result;
@@ -254,13 +324,9 @@ module cpu (
     endcase
   end
 
-  wire w_S3_Is_Load  = f_Is_Load(r_S3_Load_Store_Type);
-  wire w_S3_Is_Store = f_Is_Store(r_S3_Load_Store_Type);
-  wire w_Wb_Enable   = r_S3_Valid && r_S3_Rd_Write_Enable && !w_S3_Is_Store && (!w_S3_Is_Load || 1'b1);
-
   wire w_Store_Commit = w_Mem_Write_Done && w_S2_Is_Store && r_S2_Valid;
-  wire w_Retire_Reg   = w_Wb_Enable;
-  wire w_Retire       = w_Retire_Reg || w_Store_Commit;
+  wire w_Retire_Reg = w_Wb_Enable;
+  wire w_Retire = w_Retire_Reg || w_Store_Commit;
 
   always @(posedge i_Clock) begin
     if (!i_Reset) begin
@@ -270,5 +336,6 @@ module cpu (
     end
   end
 
+  assign o_PC = r_PC[3:0];
 
 endmodule

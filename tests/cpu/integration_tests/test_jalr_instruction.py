@@ -7,6 +7,7 @@ from cpu.utils import (
 )
 from cpu.constants import (
     OP_I_TYPE_JALR,
+    ROM_BOUNDARY_ADDR,
 )
 from cpu.utils import write_word_to_mem
 
@@ -17,7 +18,7 @@ wait_ns = 1
 async def test_jalr_instruction(dut):
     """Test JALR instruction"""
 
-    start_address = 256
+    start_address =  ROM_BOUNDARY_ADDR + 256
     dest_register = 1
     rs1 = 2
     rs1_value = 0x200
@@ -27,24 +28,24 @@ async def test_jalr_instruction(dut):
     expected_pc = rs1_value + i_type_imm
     expected_register_value = start_address + 4
 
-    write_word_to_mem(dut.cpu.instruction_memory.ram.mem, start_address, jalr_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address, jalr_instruction)
     dut.cpu.r_PC.value = start_address
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
 
-    clock = Clock(dut.cpu.i_Clock, wait_ns, "ns")
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
-    dut.cpu.i_Reset.value = 1
-    await ClockCycles(dut.cpu.i_Clock, 1)
-    dut.cpu.i_Reset.value = 0
-    await ClockCycles(dut.cpu.i_Clock, 1)
+    dut.i_Reset.value = 1
+    await ClockCycles(dut.i_Clock, 1)
+    dut.i_Reset.value = 0
+    await ClockCycles(dut.i_Clock, 1)
 
     max_cycles = 200
     pc_reached = False
     reg_reached = False
     for _ in range(max_cycles):
-        await RisingEdge(dut.cpu.i_Clock)
+        await RisingEdge(dut.i_Clock)
         if not pc_reached and dut.cpu.r_PC.value.integer == expected_pc:
             pc_reached = True
         if dut.cpu.reg_file.Registers[dest_register].value.integer == expected_register_value:
