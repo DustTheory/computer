@@ -24,10 +24,6 @@ async def test_bltu_instruction_when_ltu(dut):
     offset = 1024
     bltu_instruction = gen_b_type_instruction(FUNC3_BRANCH_BLTU, rs1, rs2, offset)
     expected_pc = start_address + offset
-    dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.instruction_ram.mem, start_address, bltu_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -36,6 +32,11 @@ async def test_bltu_instruction_when_ltu(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.r_PC.value = start_address
+    write_word_to_mem(dut.instruction_ram.mem, start_address, bltu_instruction)
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
     
     max_cycles = 100
     for _ in range(max_cycles):
@@ -58,10 +59,6 @@ async def test_bltu_instruction_when_geu(dut):
     offset = 1024
     bltu_instruction = gen_b_type_instruction(FUNC3_BRANCH_BLTU, rs1, rs2, offset)
     expected_pc = start_address + 4
-    dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.instruction_ram.mem, start_address, bltu_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -70,6 +67,11 @@ async def test_bltu_instruction_when_geu(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.r_PC.value = start_address
+    write_word_to_mem(dut.instruction_ram.mem, start_address, bltu_instruction)
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
     
     max_cycles = 100
     for _ in range(max_cycles):

@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
+`include "cpu_core_params.vh"
 
-module uart_receiver #(
-    parameter CLKS_PER_BIT = 1
-) (
+module uart_receiver (
+    input i_Reset,
     input i_Clock,
     input i_Rx_Serial,
     output o_Rx_DV,
@@ -25,61 +25,75 @@ module uart_receiver #(
   reg [ 2:0] r_Bit_Index = 0;
 
   always @(posedge i_Clock) begin
-    r_Rx_Data_R <= i_Rx_Serial;
-    r_Rx_Data   <= r_Rx_Data_R;
+    if (i_Reset) begin
+      r_Rx_Data_R <= 1'b1;
+      r_Rx_Data   <= 1'b1;
+    end else begin
+      r_Rx_Data_R <= i_Rx_Serial;
+      r_Rx_Data   <= r_Rx_Data_R;
+    end
+
   end
 
   always @(posedge i_Clock) begin
-    case (r_SM_Main)
-      s_IDLE: begin
-        r_Rx_DV <= 1'b0;
-        r_Clock_Count <= 0;
-        r_Bit_Index <= 0;
-        r_SM_Main <= r_Rx_Data == 1'b0 ? s_RX_START_BIT : s_IDLE;
-      end
-      s_RX_START_BIT: begin
-        if (r_Clock_Count == (CLKS_PER_BIT[15:0] - 1) / 2) begin
-          if (r_Rx_Data == 1'b0) begin
-            r_Clock_Count <= 0;
-            r_SM_Main <= s_RX_DATA_BITS;
-          end else r_SM_Main <= 0;
-        end else begin
-          r_Clock_Count <= r_Clock_Count + 1;
-          r_SM_Main     <= s_RX_START_BIT;
-        end
-      end
-      s_RX_DATA_BITS: begin
-        if (r_Clock_Count < CLKS_PER_BIT[15:0] - 1) begin
-          r_Clock_Count <= r_Clock_Count + 1;
-          r_SM_Main <= s_RX_DATA_BITS;
-        end else begin
+    if (i_Reset) begin
+      r_SM_Main     <= s_IDLE;
+      r_Rx_DV       <= 1'b0;
+      r_Clock_Count <= 0;
+      r_Bit_Index   <= 0;
+      r_Rx_Byte     <= 0;
+    end else begin
+      case (r_SM_Main)
+        s_IDLE: begin
+          r_Rx_DV <= 1'b0;
           r_Clock_Count <= 0;
-          r_Rx_Byte[r_Bit_Index] <= r_Rx_Data;
-          if (r_Bit_Index < 7) begin
-            r_Bit_Index <= r_Bit_Index + 1;
-            r_SM_Main   <= s_RX_DATA_BITS;
+          r_Bit_Index <= 0;
+          r_SM_Main <= r_Rx_Data == 1'b0 ? s_RX_START_BIT : s_IDLE;
+        end
+        s_RX_START_BIT: begin
+          if (r_Clock_Count == (UART_CLOCKS_PER_BIT[15:0] - 1) / 2) begin
+            if (r_Rx_Data == 1'b0) begin
+              r_Clock_Count <= 0;
+              r_SM_Main <= s_RX_DATA_BITS;
+            end else r_SM_Main <= s_IDLE;
           end else begin
-            r_Bit_Index <= 0;
-            r_SM_Main   <= s_RX_STOP_BIT;
+            r_Clock_Count <= r_Clock_Count + 1;
+            r_SM_Main     <= s_RX_START_BIT;
           end
         end
-      end
-      s_RX_STOP_BIT: begin
-        if (r_Clock_Count < CLKS_PER_BIT[15:0] - 1) begin
-          r_Clock_Count <= r_Clock_Count + 1;
-          r_SM_Main     <= s_RX_STOP_BIT;
-        end else begin
-          r_Rx_DV       <= 1'b1;
-          r_Clock_Count <= 0;
-          r_SM_Main     <= s_CLEANUP;
+        s_RX_DATA_BITS: begin
+          if (r_Clock_Count < UART_CLOCKS_PER_BIT[15:0] - 1) begin
+            r_Clock_Count <= r_Clock_Count + 1;
+            r_SM_Main <= s_RX_DATA_BITS;
+          end else begin
+            r_Clock_Count <= 0;
+            r_Rx_Byte[r_Bit_Index] <= r_Rx_Data;
+            if (r_Bit_Index < 7) begin
+              r_Bit_Index <= r_Bit_Index + 1;
+              r_SM_Main   <= s_RX_DATA_BITS;
+            end else begin
+              r_Bit_Index <= 0;
+              r_SM_Main   <= s_RX_STOP_BIT;
+            end
+          end
         end
-      end
-      s_CLEANUP: begin
-        r_SM_Main <= s_IDLE;
-        r_Rx_DV   <= 1'b0;
-      end
-      default: r_SM_Main <= s_IDLE;
-    endcase
+        s_RX_STOP_BIT: begin
+          if (r_Clock_Count < UART_CLOCKS_PER_BIT[15:0] - 1) begin
+            r_Clock_Count <= r_Clock_Count + 1;
+            r_SM_Main     <= s_RX_STOP_BIT;
+          end else begin
+            r_Rx_DV       <= 1'b1;
+            r_Clock_Count <= 0;
+            r_SM_Main     <= s_CLEANUP;
+          end
+        end
+        s_CLEANUP: begin
+          r_SM_Main <= s_IDLE;
+          r_Rx_DV   <= 1'b0;
+        end
+        default: r_SM_Main <= s_IDLE;
+      endcase
+    end
   end
 
   assign o_Rx_DV   = r_Rx_DV;

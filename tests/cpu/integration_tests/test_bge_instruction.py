@@ -24,10 +24,6 @@ async def test_bge_instruction_when_ge(dut):
     offset = 1024
     bge_instruction = gen_b_type_instruction(FUNC3_BRANCH_BGE, rs1, rs2, offset)
     expected_pc = start_address + offset
-    dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.instruction_ram.mem, start_address, bge_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -36,6 +32,11 @@ async def test_bge_instruction_when_ge(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.r_PC.value = start_address
+    write_word_to_mem(dut.instruction_ram.mem, start_address, bge_instruction)
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     max_cycles = 100
     for _ in range(max_cycles):
@@ -60,8 +61,6 @@ async def test_bge_instruction_when_lt(dut):
     expected_pc = start_address + 4
     dut.cpu.r_PC.value = start_address
     write_word_to_mem(dut.instruction_ram.mem, start_address, bge_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -70,6 +69,9 @@ async def test_bge_instruction_when_lt(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     max_cycles = 100
     for _ in range(max_cycles):

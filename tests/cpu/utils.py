@@ -4,7 +4,10 @@ from cpu.constants import (
     OP_R_TYPE,
 
     ROM_BOUNDARY_ADDR,
+    
+    UART_CLOCKS_PER_BIT,
 )
+from cocotb.triggers import ClockCycles, FallingEdge
 
 def gen_i_type_instruction(opcode, rd, funct3, rs1, imm):
     instruction = opcode
@@ -83,3 +86,29 @@ def write_instructions_rom(mem_array, base_addr, instructions):
         raise ValueError(f"Base address {base_addr:#06x} is outside of ROM boundary.")
     for i, ins in enumerate(instructions):
         mem_array[base_addr//4 + i].value = ins
+
+
+async def uart_send_byte(clock, i_rx_serial, o_rx_dv, data_byte):
+    """Send bytes over UART RX line bit by bit."""
+
+    i_rx_serial.value = 0
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+
+    # Data bits (LSB first)
+    for i in range(8):
+        i_rx_serial.value = (data_byte >> i) & 0x1
+        await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+
+    # Stop bit
+    i_rx_serial.value = 1
+    for _ in range(int(UART_CLOCKS_PER_BIT)):
+        if o_rx_dv.value.integer == 1:
+            break
+        await ClockCycles(clock, 1)
+
+
+async def uart_send_bytes(clock, i_rx_serial, o_rx_dv, byte_array):
+    """Send bytes over UART RX line bit by bit."""
+    for byte in byte_array:
+        await uart_send_byte(clock, i_rx_serial, o_rx_dv, byte)
+        await FallingEdge(o_rx_dv)  # Wait for Rx_DV to go low before sending next byte

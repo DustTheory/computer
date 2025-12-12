@@ -22,4 +22,11 @@ localparam REG_WRITE_PC_NEXT = 3;
 localparam REG_WRITE_DMEM = 4;
 localparam REG_WRITE_NONE = 5;
 
+localparam CLOCK_FREQUENCY = 100_000_000;  // 100 MHz clock
+
+// UART parameters
+localparam UART_BAUD_RATE = 115200;
+localparam UART_CLOCKS_PER_BIT = (CLOCK_FREQUENCY / UART_BAUD_RATE);
+
+
 `endif  // CPU_CORE_PARAMS_VH

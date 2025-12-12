@@ -108,4 +108,12 @@ module cpu_unit_tests_harness ();
       .s_axil_rready (s_instruction_memory_axil_rready)
   );
   // verilator lint_off PINMISSING
+
+  uart_receiver uart_receiver (.i_Clock(i_Clock));
+
+  debug_peripheral debug_peripheral (
+      .i_Reset(i_Reset),
+      .i_Clock(i_Clock)
+  );
+
 endmodule

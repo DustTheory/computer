@@ -31,9 +31,6 @@ async def test_beq_instruction_when_equal(dut):
 
     dut.cpu.r_PC.value = start_address
     write_word_to_mem(dut.instruction_ram.mem, start_address, beq_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
-
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -42,6 +39,9 @@ async def test_beq_instruction_when_equal(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     max_cycles = 100
     for _ in range(max_cycles):
@@ -67,19 +67,19 @@ async def test_beq_instruction_when_not_equal(dut):
     beq_instruction = gen_b_type_instruction(FUNC3_BRANCH_BEQ, rs1, rs2, offset)
     expected_pc = start_address + 4
 
-    dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.instruction_ram.mem, start_address, beq_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
-
-
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
+
+    dut.cpu.r_PC.value = start_address
+    write_word_to_mem(dut.instruction_ram.mem, start_address, beq_instruction)
 
     dut.i_Reset.value = 1
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     max_cycles = 100
     for _ in range(max_cycles):
