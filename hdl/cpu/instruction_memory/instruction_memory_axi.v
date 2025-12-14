@@ -28,10 +28,10 @@ module instruction_memory_axi (
     output s_axil_bready
 );
 
-  reg [31:0] rom [0:1023]; // 4KB ROM Instruction Memory
+  reg [31:0] rom[0:1023];  // 4KB ROM Instruction Memory
 
   initial begin
-    $readmemh("instruction_memory.mem", rom);
+    $readmemh("rom.mem", rom);
   end
 
   localparam IDLE = 2'b00;
@@ -86,8 +86,8 @@ module instruction_memory_axi (
 
   end
 
-  assign s_axil_araddr = i_Instruction_Addr[31:0];
+  assign s_axil_araddr  = i_Instruction_Addr[31:0];
   assign s_axil_arvalid = (r_State == READ_SUBMITTING);
-  assign s_axil_rready = (r_State == READ_AWAITING);
+  assign s_axil_rready  = (r_State == READ_AWAITING);
 
 endmodule

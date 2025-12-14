@@ -65,6 +65,8 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_debug_halt, \
 		cpu.integration_tests.test_debug_reset"	
 
+# CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_program"
+
 TEST_TYPE ?= unit  
 
 ifeq ($(TEST_TYPE),all)

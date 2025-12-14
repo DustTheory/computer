@@ -26,9 +26,9 @@ module register_file (
                            ? (w_Read2_Is_Write ? i_Write_Data : Registers[i_Read_Addr_2])
                            : {XLEN{1'b0}};
 
+  integer i;
   always @(posedge i_Clock, posedge i_Reset) begin
     if (i_Reset) begin
-      integer i;
       for (i = 0; i < (1 << REG_ADDR_WIDTH); i = i + 1) begin
         Registers[i] <= {XLEN{1'b0}};
       end
