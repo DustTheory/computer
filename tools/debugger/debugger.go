@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	_ "image/jpeg"
 	_ "image/png"
@@ -10,6 +9,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -47,15 +47,14 @@ func main() {
 	// Use a channel to signal when the reader is ready
 	ready := make(chan struct{})
 
-	// Start the read goroutine
+	// Start the read goroutine — read raw bytes (not line-delimited)
 	go func() {
 		defer close(done)
-		reader := bufio.NewReader(port)
 		// Signal that reader is ready to receive data
 		close(ready)
+		buf := make([]byte, 64)
 		for {
-			// Read until a newline character (adjust delimiter as needed by your device)
-			reply, err := reader.ReadBytes('\n')
+			n, err := port.Read(buf)
 			if err != nil {
 				// Ignore benign timeout and port-closed errors; otherwise log
 				if err.Error() == "serial: read timeout" {
@@ -68,7 +67,26 @@ func main() {
 				log.Printf("Read error: %v", err)
 				return
 			}
-			fmt.Printf("Received: %s", string(reply))
+			if n > 0 {
+				// Print raw bytes in hex and ASCII where printable
+				out := buf[:n]
+				// Hex view
+				hexParts := make([]string, len(out))
+				for i, b := range out {
+					hexParts[i] = fmt.Sprintf("0x%02X", b)
+				}
+				fmt.Printf("Received %d bytes: %s\n", n, strings.Join(hexParts, " "))
+				// ASCII view (printable characters only)
+				ascii := make([]byte, n)
+				for i, b := range out {
+					if b >= 32 && b <= 126 {
+						ascii[i] = b
+					} else {
+						ascii[i] = '.'
+					}
+				}
+				fmt.Printf("ASCII: %s\n", string(ascii))
+			}
 		}
 	}()
 
@@ -79,11 +97,22 @@ func main() {
 	<-ready
 
 	// Send an initial ping
-	n, err := port.Write([]byte{byte(op_PING)})
+	n, err := port.Write([]byte{byte(op_RESET)})
 	if err != nil {
 		log.Printf("Error writing to serial port: %v", err)
 	} else {
 		fmt.Printf("Sent %d bytes.\n", n)
+	}
+
+	// Give the peripheral a short moment to process the unreset
+	time.Sleep(50 * time.Millisecond)
+
+	// Send ping
+	n, err = port.Write([]byte{byte(op_PING)})
+	if err != nil {
+		log.Printf("Error writing ping to serial port: %v", err)
+	} else {
+		fmt.Printf("Sent ping (%d bytes).\n", n)
 	}
 
 	// Wait for interrupt (Ctrl+C) or termination and then shut down gracefully.

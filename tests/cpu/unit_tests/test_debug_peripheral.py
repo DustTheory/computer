@@ -78,3 +78,36 @@ async def test_ping_command (dut):
 
     received_byte = await wait_for_byte_task
     assert received_byte == PING_RESPONSE_BYTE, f"Debug peripheral did not respond correctly to PING command: got {bin(received_byte)}, expected {bin(PING_RESPONSE_BYTE)}"
+    assert dut.debug_peripheral.r_State == 0, f"Debug peripheral did not return to IDLE state"
+
+
+@cocotb.test()
+async def test_ping_command_twice(dut):
+
+    clock = Clock(dut.i_Clock, wait_ns, "ns")
+    cocotb.start_soon(clock.start())
+
+    dut.i_Reset.value = 1
+    await Timer(100, units="ns")
+    dut.i_Reset.value = 0
+    await Timer(100, units="ns")
+
+    # Start task to wait for byte from UART transmitter
+    wait_for_byte_task = cocotb.start_soon(uart_wait_for_byte(dut.i_Clock, dut.debug_peripheral.uart_transmitter.o_Tx_Serial, dut.debug_peripheral.uart_transmitter.o_Tx_Done))
+
+    # Send PING command
+    await uart_send_byte(dut.i_Clock, dut.debug_peripheral.i_Uart_Tx_In, dut.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_PING) 
+
+    received_byte = await wait_for_byte_task
+    assert received_byte == PING_RESPONSE_BYTE, f"Debug peripheral did not respond correctly to PING command: got {bin(received_byte)}, expected {bin(PING_RESPONSE_BYTE)}"
+    assert dut.debug_peripheral.r_State == 0, f"Debug peripheral did not return to IDLE state"
+
+    # Start task to wait for byte from UART transmitter
+    wait_for_byte_task = cocotb.start_soon(uart_wait_for_byte(dut.i_Clock, dut.debug_peripheral.uart_transmitter.o_Tx_Serial, dut.debug_peripheral.uart_transmitter.o_Tx_Done))
+
+    # Send PING command
+    await uart_send_byte(dut.i_Clock, dut.debug_peripheral.i_Uart_Tx_In, dut.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_PING) 
+
+    received_byte = await wait_for_byte_task
+    assert received_byte == PING_RESPONSE_BYTE, f"Debug peripheral did not respond correctly to PING command: got {bin(received_byte)}, expected {bin(PING_RESPONSE_BYTE)}"
+    assert dut.debug_peripheral.r_State == 0, f"Debug peripheral did not return to IDLE state"

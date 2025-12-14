@@ -66,6 +66,9 @@ module debug_peripheral (
       r_Op_Code <= 0;
       o_Halt_Cpu <= 0;
       o_Reset_Cpu <= 0;
+      r_Tx_DV <= 0;
+      r_Tx_Byte <= 0;
+      r_Exec_Counter <= 0;
     end else begin
       case (r_State)
         s_IDLE: begin
@@ -101,7 +104,7 @@ module debug_peripheral (
               if (r_Exec_Counter == 0) begin
                 r_Tx_Byte <= PING_RESPONSE_BYTE;
                 r_Tx_DV   <= 1;
-              end else if (r_Exec_Counter == 1) begin
+              end else if (r_Exec_Counter > 0) begin
                 r_Tx_DV   <= 0;
                 r_Tx_Byte <= 0;
                 if (w_Tx_Done) begin
