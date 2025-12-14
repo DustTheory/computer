@@ -8,6 +8,7 @@ module cpu (
     input i_Init_Calib_Complete,
     input i_Uart_Tx_In,
 
+    output i_Uart_Tx_Out,
     output [3:0] o_PC,
 
     // AXI INTERFACE FOR DATA MEMORY
@@ -350,6 +351,7 @@ module cpu (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
       .i_Uart_Tx_In(i_Uart_Tx_In),
+      .o_Uart_Rx_Out(i_Uart_Tx_Out),
       .o_Halt_Cpu(w_Debug_Stall),
       .o_Reset_Cpu(w_Debug_Reset)
   );

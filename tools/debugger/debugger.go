@@ -1,0 +1,99 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	_ "image/jpeg"
+	_ "image/png"
+	"log"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+
+	"go.bug.st/serial"
+)
+
+type OpCode byte
+
+const (
+	op_NOP     OpCode = 0x0
+	op_RESET   OpCode = 0x1
+	op_UNRESET OpCode = 0x2
+	op_HALT    OpCode = 0x3
+	op_UNHALT  OpCode = 0x4
+	op_PING    OpCode = 0x5
+)
+
+func main() {
+
+	const serialPortName = "/dev/ttyUSB1"
+	const baudRate = 115200
+
+	mode := &serial.Mode{
+		BaudRate: baudRate,
+		DataBits: 8,
+		Parity:   serial.NoParity,
+		StopBits: serial.OneStopBit,
+	}
+
+	port, err := serial.Open(serialPortName, mode)
+	if err != nil {
+		log.Fatalf("Failed to open serial port %s: %v", serialPortName, err)
+	}
+
+	// Use a channel to gracefully stop the reader goroutine
+	done := make(chan struct{})
+	// Use a channel to signal when the reader is ready
+	ready := make(chan struct{})
+
+	// Start the read goroutine
+	go func() {
+		defer close(done)
+		reader := bufio.NewReader(port)
+		// Signal that reader is ready to receive data
+		close(ready)
+		for {
+			// Read until a newline character (adjust delimiter as needed by your device)
+			reply, err := reader.ReadBytes('\n')
+			if err != nil {
+				// Ignore benign timeout and port-closed errors; otherwise log
+				if err.Error() == "serial: read timeout" {
+					return
+				}
+				if strings.Contains(strings.ToLower(err.Error()), "closed") {
+					// expected when we close the port to shutdown
+					return
+				}
+				log.Printf("Read error: %v", err)
+				return
+			}
+			fmt.Printf("Received: %s", string(reply))
+		}
+	}()
+
+	fmt.Printf("--- Connected to %s at %d baud ---\n", serialPortName, baudRate)
+	fmt.Println("Press Ctrl+C to stop streaming.")
+
+	// Wait until the reader goroutine has created its reader so we don't miss a fast reply
+	<-ready
+
+	// Send an initial ping
+	n, err := port.Write([]byte{byte(op_PING)})
+	if err != nil {
+		log.Printf("Error writing to serial port: %v", err)
+	} else {
+		fmt.Printf("Sent %d bytes.\n", n)
+	}
+
+	// Wait for interrupt (Ctrl+C) or termination and then shut down gracefully.
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
+	fmt.Println("\nSignal received, shutting down...")
+
+	// Close the port to unblock the reader goroutine and wait for it.
+	_ = port.Close()
+	<-done
+
+}

@@ -6,7 +6,8 @@ module debug_peripheral (
     input i_Clock,
     input i_Reset,
 
-    input i_Uart_Tx_In,
+    input  i_Uart_Tx_In,
+    output o_Uart_Rx_Out,
 
     output reg o_Halt_Cpu = 0,
     output reg o_Reset_Cpu = 0
@@ -33,6 +34,26 @@ module debug_peripheral (
       .o_Rx_Byte(w_Rx_Byte)
   );
 
+  /* ----------------UART_TRANSMITTER---------------- */
+
+  // // Output buffer (FIFO)
+  // reg [7:0] output_buffer[0:255];
+  // reg [7:0] output_buffer_head = 0;
+  // reg [7:0] output_buffer_tail = 0;
+
+  reg r_Tx_DV;
+  reg [7:0] r_Tx_Byte;
+  wire w_Tx_Done;
+
+  uart_transmitter uart_transmitter (
+      .i_Reset(i_Reset),
+      .i_Clock(i_Clock),
+      .i_Tx_DV(r_Tx_DV),
+      .i_Tx_Byte(r_Tx_Byte),
+      .o_Tx_Serial(o_Uart_Rx_Out),
+      .o_Tx_Done(w_Tx_Done)
+  );
+
   /* ----------------DEBUG PERIPHERAL LOGIC---------------- */
 
   reg [ 1:0] r_State = s_IDLE;
@@ -55,25 +76,41 @@ module debug_peripheral (
           end
         end
         s_DECODE_AND_EXECUTE: begin
-          r_State <= s_IDLE;
           case (r_Op_Code)
             op_NOP: begin
               // Do nothing
+              r_State <= s_IDLE;
             end
             op_RESET: begin
               o_Reset_Cpu <= 1;
+              r_State <= s_IDLE;
             end
             op_UNRESET: begin
               o_Reset_Cpu <= 0;
+              r_State <= s_IDLE;
             end
             op_HALT: begin
               o_Halt_Cpu <= 1;
+              r_State <= s_IDLE;
             end
             op_UNHALT: begin
               o_Halt_Cpu <= 0;
+              r_State <= s_IDLE;
+            end
+            op_PING: begin
+              if (r_Exec_Counter == 0) begin
+                r_Tx_Byte <= PING_RESPONSE_BYTE;
+                r_Tx_DV   <= 1;
+              end else if (r_Exec_Counter == 1) begin
+                r_Tx_DV   <= 0;
+                r_Tx_Byte <= 0;
+                if (w_Tx_Done) begin
+                  r_State <= s_IDLE;
+                end
+              end
             end
             default: begin
-              // Unknown op code, do nothing
+              r_State <= s_IDLE;
             end
           endcase
           r_Exec_Counter <= r_Exec_Counter + 1;

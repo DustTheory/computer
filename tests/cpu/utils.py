@@ -1,4 +1,5 @@
 from cpu.constants import (
+    CLOCK_FREQUENCY,
     OP_B_TYPE,
     OP_S_TYPE,
     OP_R_TYPE,
@@ -112,3 +113,32 @@ async def uart_send_bytes(clock, i_rx_serial, o_rx_dv, byte_array):
     for byte in byte_array:
         await uart_send_byte(clock, i_rx_serial, o_rx_dv, byte)
         await FallingEdge(o_rx_dv)  # Wait for Rx_DV to go low before sending next byte
+
+async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
+    """Wait for a byte to be transmitted over UART TX line bit by bit."""
+    
+    # Wait for start bit for max 1 second
+    timeout_cycles = CLOCK_FREQUENCY  # 1 second timeout
+    cycles_waited = 0
+    while i_tx_serial.value.integer != 0:
+        await ClockCycles(clock, 1)
+        cycles_waited += 1
+        assert cycles_waited < timeout_cycles, "Timeout waiting for UART start bit."
+    
+    # Wait UART_CLOCKS_PER_BIT/2 to sample in middle of start bit
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT) // 2)
+    assert i_tx_serial.value.integer == 0, "UART start bit incorrect."
+
+    # Data bits (LSB first)
+    received_byte = 0
+    for i in range(8):
+        await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+        bit = i_tx_serial.value.integer
+        received_byte |= (bit << i)
+
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+    assert i_tx_serial.value.integer == 1, "UART stop bit incorrect."
+        
+    return received_byte
+        
+

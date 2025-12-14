@@ -109,7 +109,15 @@ module cpu_unit_tests_harness ();
   );
   // verilator lint_off PINMISSING
 
-  uart_receiver uart_receiver (.i_Clock(i_Clock));
+  uart_receiver uart_receiver (
+      .i_Reset(i_Reset),
+      .i_Clock(i_Clock)
+  );
+
+  uart_transmitter uart_transmitter (
+      .i_Reset(i_Reset),
+      .i_Clock(i_Clock)
+  );
 
   debug_peripheral debug_peripheral (
       .i_Reset(i_Reset),

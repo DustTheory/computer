@@ -18,7 +18,11 @@ Get CPU statistics
 
 Instructions:
 0x0 - NOP
-0x1 - Halt CPU
+0x1 - Reset
+0x2 - Unreset
+0x3 - Halt
+0x4 - Unhalt
+0x5- Ping
 0x2 - Read state or register with address supplied in next byte
    0-31 - General purpose registers
    32 - PC
