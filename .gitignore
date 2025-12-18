@@ -3,3 +3,7 @@ gpu/
 tests/test_env/
 tests/results.xml
 tests/sim_build
+
+# Debugger
+tools/debugger/debugger
+tools/debugger/logs/
