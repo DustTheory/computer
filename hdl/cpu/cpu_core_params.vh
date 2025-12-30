@@ -22,7 +22,8 @@ localparam REG_WRITE_PC_NEXT = 3;
 localparam REG_WRITE_DMEM = 4;
 localparam REG_WRITE_NONE = 5;
 
-localparam CLOCK_FREQUENCY = 100_000_000;  // 100 MHz clock
+// localparam CLOCK_FREQUENCY = 100_000_000;  // Actual MIG ui_clk frequency
+localparam CLOCK_FREQUENCY = 151_515_152;  // Actual MIG ui_clk frequency
 
 // UART parameters
 localparam UART_BAUD_RATE = 115200;

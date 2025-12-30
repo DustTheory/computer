@@ -8,8 +8,7 @@ module cpu (
     input i_Init_Calib_Complete,
     input i_Uart_Tx_In,
 
-    output i_Uart_Tx_Out,
-    output [3:0] o_PC,
+    output o_Uart_Rx_Out,
 
     // AXI INTERFACE FOR DATA MEMORY
     output [31:0] s_data_memory_axil_araddr,
@@ -351,11 +350,9 @@ module cpu (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
       .i_Uart_Tx_In(i_Uart_Tx_In),
-      .o_Uart_Rx_Out(i_Uart_Tx_Out),
+      .o_Uart_Rx_Out(o_Uart_Rx_Out),
       .o_Halt_Cpu(w_Debug_Stall),
       .o_Reset_Cpu(w_Debug_Reset)
   );
-
-  assign o_PC = r_PC[3:0];  // Output lower 4 bits of PC for observation via onboard LEDs
 
 endmodule
