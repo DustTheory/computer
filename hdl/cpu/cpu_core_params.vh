@@ -22,12 +22,10 @@ localparam REG_WRITE_PC_NEXT = 3;
 localparam REG_WRITE_DMEM = 4;
 localparam REG_WRITE_NONE = 5;
 
-// localparam CLOCK_FREQUENCY = 100_000_000;  // Actual MIG ui_clk frequency
-localparam CLOCK_FREQUENCY = 151_515_152;  // Actual MIG ui_clk frequency
+localparam CLOCK_FREQUENCY = 75_757_576;
 
 // UART parameters
 localparam UART_BAUD_RATE = 115200;
 localparam UART_CLOCKS_PER_BIT = (CLOCK_FREQUENCY / UART_BAUD_RATE);
-
 
 `endif  // CPU_CORE_PARAMS_VH
