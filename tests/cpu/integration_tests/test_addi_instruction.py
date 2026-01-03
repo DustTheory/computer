@@ -18,12 +18,6 @@ async def test_addi_instruction(dut):
     imm_value = 0x10
     expected_result = rs1_value + imm_value
 
-    instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_ADD_SUB, rs1, imm_value)
-
-    write_word_to_mem(dut.instruction_ram.mem, start_address, instruction)
-    dut.cpu.r_PC.value = start_address
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value & 0xFFFFFFFF
-
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
@@ -31,6 +25,12 @@ async def test_addi_instruction(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd, FUNC3_ALU_ADD_SUB, rs1, imm_value)
+
+    write_word_to_mem(dut.instruction_ram.mem, start_address, instruction)
+    dut.cpu.r_PC.value = start_address
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value & 0xFFFFFFFF
 
     await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 

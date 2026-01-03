@@ -23,6 +23,7 @@ module gpu (
   uart_receiver #(
       .CLKS_PER_BIT(UART_CLOCKS_PER_BIT)
   ) UART_RECEIVER (
+      .i_Reset(),
       .i_Clock(i_Clock),
       .i_Rx_Serial(i_Uart_Tx_In),
       .o_Rx_DV(w_Rx_DV),
@@ -46,17 +47,17 @@ module gpu (
       .o_Read_Data(w_Read_Data)
   );
 
-  instruction_engine #(
-      .BITS_PER_PIXEL(BITS_PER_PIXEL),
-      .FRAMEBUFFER_DEPTH(FRAMEBUFFER_DEPTH)
-  ) INSTRUCTION_ENGINE (
-      .i_Clock(i_Clock),
-      .i_Rx_DV(w_Rx_DV),
-      .i_Rx_Byte(w_Rx_Byte),
-      .o_Write_Enable(w_Write_Enable),
-      .o_Write_Addr(w_Write_Addr),
-      .o_Write_Data(w_Write_Data)
-  );
+  //   instruction_engine #(
+  //       .BITS_PER_PIXEL(BITS_PER_PIXEL),
+  //       .FRAMEBUFFER_DEPTH(FRAMEBUFFER_DEPTH)
+  //   ) INSTRUCTION_ENGINE (
+  //       .i_Clock(i_Clock),
+  //       .i_Rx_DV(w_Rx_DV),
+  //       .i_Rx_Byte(w_Rx_Byte),
+  //       .o_Write_Enable(w_Write_Enable),
+  //       .o_Write_Addr(w_Write_Addr),
+  //       .o_Write_Data(w_Write_Data)
+  //   );
 
   vga_out #(
       .BITS_PER_PIXEL(BITS_PER_PIXEL),

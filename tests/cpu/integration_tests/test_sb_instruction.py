@@ -30,11 +30,6 @@ async def test_sb_instruction(dut):
     word_index = mem_address
 
     sh_instruction = gen_s_type_instruction(FUNC3_LS_B, rs1, rs2, imm_value)
-   
-    dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.instruction_ram.mem, start_address, sh_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -43,6 +38,11 @@ async def test_sb_instruction(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    dut.cpu.r_PC.value = start_address
+    write_word_to_mem(dut.instruction_ram.mem, start_address, sh_instruction)
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    dut.cpu.reg_file.Registers[rs2].value = rs2_value
 
     await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 

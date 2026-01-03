@@ -1,10 +1,14 @@
 from cpu.constants import (
+    CLOCK_FREQUENCY,
     OP_B_TYPE,
     OP_S_TYPE,
     OP_R_TYPE,
 
     ROM_BOUNDARY_ADDR,
+    
+    UART_CLOCKS_PER_BIT,
 )
+from cocotb.triggers import ClockCycles, FallingEdge
 
 def gen_i_type_instruction(opcode, rd, funct3, rs1, imm):
     instruction = opcode
@@ -83,3 +87,64 @@ def write_instructions_rom(mem_array, base_addr, instructions):
         raise ValueError(f"Base address {base_addr:#06x} is outside of ROM boundary.")
     for i, ins in enumerate(instructions):
         mem_array[base_addr//4 + i].value = ins
+
+
+async def uart_send_byte(clock, i_rx_serial, o_rx_dv, data_byte):
+    """Send bytes over UART RX line bit by bit."""
+
+    i_rx_serial.value = 0
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+
+    # Data bits (LSB first)
+    for i in range(8):
+        i_rx_serial.value = (data_byte >> i) & 0x1
+        await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+
+    # Stop bit
+    i_rx_serial.value = 1
+    for _ in range(int(UART_CLOCKS_PER_BIT)):
+        if o_rx_dv.value.integer == 1:
+            break
+        await ClockCycles(clock, 1)
+
+
+async def uart_send_bytes(clock, i_rx_serial, o_rx_dv, byte_array):
+    """Send bytes over UART RX line bit by bit."""
+    for byte in byte_array:
+        await uart_send_byte(clock, i_rx_serial, o_rx_dv, byte)
+        await FallingEdge(o_rx_dv)  # Wait for Rx_DV to go low before sending next byte
+
+async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
+    """Wait for a byte to be transmitted over UART TX line bit by bit."""
+    
+    # Wait for start bit for max 1 second
+    timeout_cycles = CLOCK_FREQUENCY  # 1 second timeout
+    cycles_waited = 0
+    while i_tx_serial.value.integer != 0:
+        await ClockCycles(clock, 1)
+        cycles_waited += 1
+        assert cycles_waited < timeout_cycles, "Timeout waiting for UART start bit."
+    
+    # Wait UART_CLOCKS_PER_BIT/2 to sample in middle of start bit
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT) // 2)
+    assert i_tx_serial.value.integer == 0, "UART start bit incorrect."
+
+    # Data bits (LSB first)
+    received_byte = 0
+    for i in range(8):
+        await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+        bit = i_tx_serial.value.integer
+        received_byte |= (bit << i)
+
+
+
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT)//2)
+    assert i_tx_serial.value.integer == 1, "UART stop bit incorrect."
+        
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+
+    assert o_tx_done == 1, "UART o_Tx_Done flag not set"
+
+    return received_byte
+        
+

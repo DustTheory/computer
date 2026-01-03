@@ -6,7 +6,9 @@ module cpu (
     input i_Reset,
     input i_Clock,
     input i_Init_Calib_Complete,
-    output [3:0] o_PC,
+    input i_Uart_Tx_In,
+
+    output o_Uart_Rx_Out,
 
     // AXI INTERFACE FOR DATA MEMORY
     output [31:0] s_data_memory_axil_araddr,
@@ -138,6 +140,7 @@ module cpu (
   );
 
   register_file reg_file (
+      .i_Reset(w_Reset),
       .i_Enable(w_Instruction_Valid || w_Wb_Enable),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
@@ -175,7 +178,7 @@ module cpu (
   );
 
   instruction_memory_axi instruction_memory (
-      .i_Reset(i_Reset),
+      .i_Reset(w_Reset),
       .i_Clock(i_Clock),
       .i_Enable(i_Init_Calib_Complete),
       .i_Instruction_Addr(r_PC),
@@ -235,11 +238,16 @@ module cpu (
   wire w_Mem_Write_Done = (w_Memory_State == WRITE_SUCCESS);
   wire w_Mem_Busy = (w_Memory_State != IDLE);
 
-  wire w_Stall_S1 = !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
+  wire w_Debug_Stall;
+  wire w_Debug_Reset;
+
+  wire w_Reset = i_Reset || w_Debug_Reset;
+
+  wire w_Stall_S1 = w_Debug_Stall || !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
 
   // Memory interface driven from S2
   memory_axi mem (
-      .i_Reset(i_Reset),
+      .i_Reset(w_Reset),
       .i_Clock(i_Clock),
       .i_Enable(i_Init_Calib_Complete),
       .i_Load_Store_Type(r_S2_Load_Store_Type),
@@ -268,7 +276,7 @@ module cpu (
 
   // Pipeline progression
   always @(posedge i_Clock) begin
-    if (i_Reset) begin
+    if (w_Reset) begin
       r_S2_Valid <= 1'b0;
       r_S3_Valid <= 1'b0;
       r_S2_Load_Store_Type <= LS_TYPE_NONE;
@@ -329,13 +337,22 @@ module cpu (
   wire w_Retire = w_Retire_Reg || w_Store_Commit;
 
   always @(posedge i_Clock) begin
-    if (!i_Reset) begin
+    if (!w_Reset) begin
       if (!w_Stall_S1 && w_Instruction_Valid) begin
         r_PC <= w_Pc_Alu_Mux_Select ? w_Alu_Result : w_PC_Next;
       end
     end
   end
 
-  assign o_PC = r_PC[3:0];
+  /*----------------DEBUG PERIPHERAL----------------*/
+
+  debug_peripheral debug_peripheral (
+      .i_Reset(),  // Intentionally unconnected for debugging - system reset stuck high
+      .i_Clock(i_Clock),
+      .i_Uart_Tx_In(i_Uart_Tx_In),
+      .o_Uart_Rx_Out(o_Uart_Rx_Out),
+      .o_Halt_Cpu(w_Debug_Stall),
+      .o_Reset_Cpu(w_Debug_Reset)
+  );
 
 endmodule

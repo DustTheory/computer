@@ -18,7 +18,10 @@ CPU_UNIT_TESTS_MODULE = "cpu.unit_tests.test_arithmetic_logic_unit, \
 		  cpu.unit_tests.test_register_file, \
 		  cpu.unit_tests.test_control_unit, \
 		  cpu.unit_tests.test_instruction_memory_axi, \
-		  cpu.unit_tests.test_memory_axi"
+		  cpu.unit_tests.test_memory_axi, \
+		  cpu.unit_tests.test_uart_receiver, \
+		  cpu.unit_tests.test_uart_transmitter, \
+		  cpu.unit_tests.test_debug_peripheral"
 
 CPU_INTEGRATION_TESTS_TOPLEVEL = cpu_integration_tests_harness
 CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
@@ -59,7 +62,10 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_srai_instruction, \
 		cpu.integration_tests.test_slti_instruction, \
 		cpu.integration_tests.test_sltiu_instruction, \
-		cpu.integration_tests.test_program"
+		cpu.integration_tests.test_program, \
+		cpu.integration_tests.test_debug_halt, \
+		cpu.integration_tests.test_debug_reset"	
+
 
 TEST_TYPE ?= unit  
 

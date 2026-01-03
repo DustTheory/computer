@@ -2,6 +2,7 @@
 `include "cpu_core_params.vh"
 
 module register_file (
+    input i_Reset,
     input i_Enable,
     input i_Clock,
     input [REG_ADDR_WIDTH-1:0] i_Read_Addr_1,
@@ -25,11 +26,18 @@ module register_file (
                            ? (w_Read2_Is_Write ? i_Write_Data : Registers[i_Read_Addr_2])
                            : {XLEN{1'b0}};
 
-  always @(posedge i_Clock) begin
-    if (i_Enable && i_Write_Enable && i_Write_Addr != {REG_ADDR_WIDTH{1'b0}})
-      Registers[i_Write_Addr] <= i_Write_Data;
-    if (i_Enable && i_Write_Enable && i_Write_Addr == {REG_ADDR_WIDTH{1'b0}})
-      Registers[i_Write_Addr] <= {XLEN{1'b0}};
+  integer i;
+  always @(posedge i_Clock, posedge i_Reset) begin
+    if (i_Reset) begin
+      for (i = 0; i < (1 << REG_ADDR_WIDTH); i = i + 1) begin
+        Registers[i] <= {XLEN{1'b0}};
+      end
+    end else begin
+      if (i_Enable && i_Write_Enable && i_Write_Addr != {REG_ADDR_WIDTH{1'b0}})
+        Registers[i_Write_Addr] <= i_Write_Data;
+      if (i_Enable && i_Write_Enable && i_Write_Addr == {REG_ADDR_WIDTH{1'b0}})
+        Registers[i_Write_Addr] <= {XLEN{1'b0}};
+    end
   end
 
 endmodule

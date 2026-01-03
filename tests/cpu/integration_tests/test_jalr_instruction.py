@@ -28,11 +28,6 @@ async def test_jalr_instruction(dut):
     expected_pc = rs1_value + i_type_imm
     expected_register_value = start_address + 4
 
-    write_word_to_mem(dut.instruction_ram.mem, start_address, jalr_instruction)
-    dut.cpu.r_PC.value = start_address
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-
-
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
@@ -40,6 +35,10 @@ async def test_jalr_instruction(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    write_word_to_mem(dut.instruction_ram.mem, start_address, jalr_instruction)
+    dut.cpu.r_PC.value = start_address
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
 
     max_cycles = 200
     pc_reached = False
