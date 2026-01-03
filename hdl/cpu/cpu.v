@@ -347,7 +347,7 @@ module cpu (
   /*----------------DEBUG PERIPHERAL----------------*/
 
   debug_peripheral debug_peripheral (
-      .i_Reset(i_Reset),
+      .i_Reset(),  // Intentionally unconnected for debugging - system reset stuck high
       .i_Clock(i_Clock),
       .i_Uart_Tx_In(i_Uart_Tx_In),
       .o_Uart_Rx_Out(o_Uart_Rx_Out),

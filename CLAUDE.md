@@ -12,6 +12,7 @@ This project includes structured documentation for Claude (AI) and for humans.
 - **Architecture**: [cpu-architecture.md](docs/ai/cpu-architecture.md), [memory-map.md](docs/ai/memory-map.md), [axi-interface.md](docs/ai/axi-interface.md)
 - **Testing**: [test-guide.md](docs/ai/test-guide.md), [coverage.md](docs/ai/coverage.md)
 - **Debug**: [debug-protocol.md](docs/ai/debug-protocol.md)
+- **MIG/Vivado**: [mig-vivado-setup.md](docs/ai/mig-vivado-setup.md)
 - **File tracking**: [file-index.md](docs/ai/file-index.md)
 
 **For humans**: [docs/everyone/](docs/everyone/) (setup guides, troubleshooting)
@@ -74,7 +75,7 @@ config/
 4. Update [file-index.md](docs/ai/file-index.md) if documenting new files
 
 **Common task patterns**:
-- **MIG/DDR3 issues**: Add findings to "Current Blocker" section above or create `docs/ai/mig-ddr3.md`
+- **MIG/DDR3 issues**: Document in [mig-vivado-setup.md](docs/ai/mig-vivado-setup.md) - note that Vivado configs are NOT in this repo
 - **CPU logic**: Document patterns in module-specific `docs/ai/*.md`
 - **Debug protocol**: Update [debug-protocol.md](docs/ai/debug-protocol.md) when protocol changes
 - **Constraints/timing**: Document in `docs/ai/fpga-constraints.md`

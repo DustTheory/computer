@@ -1,6 +1,6 @@
 # Documentation Process
 
-**Last updated**: 2026-01-02 (revised acronym expansion guidance)  
+**Last updated**: 2026-01-02 (added explicit trigger for user corrections)  
 **Related docs**: [CLAUDE.md](../../CLAUDE.md), [file-index.md](file-index.md)
 
 ---
@@ -116,7 +116,8 @@ Update **immediately** when:
 - Learning why something works (or doesn't)
 - Reading a source file for the first time (add to `docs/ai/file-index.md`)
 - Modifying a documented source file (update timestamp in doc header to current date)
-- **User corrects your understanding or approach** - update guidelines to capture the learning
+- **User corrects your understanding or approach** - STOP and update docs immediately BEFORE continuing the conversation
+- **User corrects a factual error** (e.g., "X is not in the repo") - update relevant docs immediately, don't just acknowledge
 - **You realize a guideline is wrong/pedantic** - fix the guideline AND add to evaluation checklist
 
 **Critical**: When the user teaches you something about the documentation process itself, update this file immediately. Don't just acknowledge - capture the lesson in the guidelines.
