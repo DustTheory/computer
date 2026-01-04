@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module reset_timer #(
-    parameter COUNTER_WIDTH = 17,
-    parameter HOLD_CYCLES   = 64000  // 200us at 320 MHz = 64,000 cycles
+    parameter COUNTER_WIDTH = 15,
+    parameter HOLD_CYCLES   = 20000  // 200us at 100 MHz = 20,000 cycles
 ) (
     input i_Clock,
     input i_Enable,

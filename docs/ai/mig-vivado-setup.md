@@ -10,11 +10,12 @@
 
 **Memory part**: MT41K128M16XX-15E (16-bit DDR3, 128Mb, -15E speed grade)
 - **Data width**: 16 bits
-- **Clock**: 100 MHz input → Clock Wizard → **320 MHz sys_clk (3125 ps)**, **320 MHz ref_clk (3124 ps)**
-- **UI clock**: **80 MHz** (DDR3-640, 320 MHz ÷ 4 PHY ratio)
+- **Clock**: 100 MHz input → Clock Wizard → **100 MHz sys_clk (10000 ps)**, **200 MHz ref_clk (5000 ps)**
+- **Memory clock**: **324.99 MHz** (3077 ps, generated internally by MIG)
+- **UI clock**: **81.25 MHz** (DDR3-650, 324.99 MHz ÷ 4 PHY ratio)
 - **AXI interface**: 128-bit data width at MIG (SmartConnect handles width conversion from CPU's 32-bit)
 
-**Critical**: Ensure MIG configured for **MT41K128M16XX-15E**, NOT MT41J128M8XX-125 (8-bit). **Use Bank 34 ONLY** (Bank 15 has RGB LEDs causing voltage conflict).
+**Critical**: Ensure MIG configured for **MT41K128M16XX-15E**, NOT MT41J128M8XX-125 (8-bit). **Use Bank 34 ONLY** (Bank 15 has RGB LEDs causing voltage conflict). **Reference clock MUST be 200 MHz** for 7-series DDR3 IDELAYCTRL calibration.
 
 ---
 
@@ -28,14 +29,15 @@
 **MIG Controller Options**:
 - Memory: DDR3_SDRAM
 - Interface: AXI (128-bit data width, 28-bit address, 4-bit ID)
-- **System Clock Period: 3125 ps (320 MHz)**
-- **Reference Clock Period: 3124 ps (320 MHz)**
+- **Input Clock Period: 10000 ps (100 MHz)** - this goes to sys_clk_i
+- **Clock Period: 3077 ps (324.99 MHz)** - memory interface clock (MIG-generated)
+- **Reference Clock: 200 MHz (5000 ps)** - MANDATORY for IDELAYCTRL
 - Phy to Controller Clock Ratio: 4:1
 - Memory Part: **MT41K128M16XX-15E** (16-bit, correct part)
 - Data Width: 16 bits
 - ECC: Disabled
 - Arbitration Scheme: RD_PRI_REG
-- **Resulting UI Clock: 80 MHz** (320 MHz ÷ 4)
+- **Resulting UI Clock: 81.25 MHz** (324.99 MHz ÷ 4)
 
 **Bank Selection (ACTUAL WORKING CONFIGURATION)**:
 - **Bank 34 ONLY** (all 4 byte groups):
@@ -62,12 +64,12 @@
 **Goal**: Hold MIG `sys_rst` (ACTIVE-LOW) for minimum 200µs during startup.
 
 **Implementation**:
-- Custom `hdl/reset_timer.v` module counts **64,000 cycles @ 320 MHz = 200µs**
+- Custom `hdl/reset_timer.v` module counts **20,000 cycles @ 100 MHz = 200µs**
 - When Clock Wizard locks: timer starts
 - During count: `o_Mig_Reset` = LOW (MIG held in reset)
 - After count: `o_Mig_Reset` = HIGH (MIG reset released)
 - Direct connection to MIG `sys_rst` (no inverter needed)
-- **Parameters**: `COUNTER_WIDTH=17`, `HOLD_CYCLES=64000`
+- **Parameters**: `COUNTER_WIDTH=15`, `HOLD_CYCLES=20000`
 
 
 ---
@@ -75,10 +77,12 @@
 ## Key Points for Claude
 
 - **⚠️ CRITICAL: NEVER modify `/home/emma/gpu/config/arty-s7-50.xdc`** - This file is USER/VIVADO-CONTROLLED ONLY. Only user or Vivado GUI can make changes to it. If XDC changes are needed, provide guidance only; do not edit directly.
-- **Reset timer**: Custom `hdl/reset_timer.v` provides 200µs hold time (64,000 cycles @ 320 MHz) for MIG sys_rst
+- **Reset timer**: Custom `hdl/reset_timer.v` provides 200µs hold time (20,000 cycles @ 100 MHz) for MIG sys_rst
 - **Memory part**: Verify MIG is configured for MT41K128M16XX-15E (16-bit), not MT41J128M8XX-125 (8-bit)
-- **Clock frequencies**: **320 MHz sys_clk (3125 ps)** and **320 MHz ref_clk (3124 ps)** from Clock Wizard
-- **UI clock**: MIG generates **80 MHz ui_clk** (320 MHz ÷ 4 PHY ratio) - CPU runs at this speed
+- **Clock frequencies**: **100 MHz sys_clk (10000 ps)** and **200 MHz ref_clk (5000 ps)** from Clock Wizard
+- **Memory clock**: MIG generates **324.99 MHz** (3077 ps) internal clock
+- **UI clock**: MIG generates **81.25 MHz ui_clk** (324.99 MHz ÷ 4 PHY ratio) - CPU runs at this speed
+- **Reference clock requirement**: **MUST be 200 MHz** for 7-series IDELAYCTRL - this is non-negotiable
 - **Signal polarity**: MIG `sys_rst` is ACTIVE-LOW (LOW=reset, HIGH=normal)
 - **AXI**: MIG uses 128-bit AXI data width; SmartConnect handles width conversion from CPU's 32-bit AXI-Lite
 - **Bank assignment**: **MUST use Bank 34 for DDR3** - Bank 15 has RGB LEDs (3.3V) incompatible with DDR3 (1.5V)
@@ -90,9 +94,9 @@
 ### Overview
 The design uses a modular Vivado block diagram with:
 - **Input clock**: 100 MHz from board oscillator
-- **Clock Wizard**: Generates **320 MHz** (MIG sys_clk and ref_clk, reset_timer clock)
+- **Clock Wizard**: Generates **100 MHz** (MIG sys_clk, reset_timer clock) and **200 MHz** (MIG ref_clk)
 - **Reset conditioning**: Custom Verilog timer + Processor System Reset IP
-- **Memory interface**: MIG 7-series DDR3 controller
+- **Memory interface**: MIG 7-series DDR3 controller (generates 324.99 MHz internally, 81.25 MHz ui_clk)
 - **CPU-to-Memory**: AXI SmartConnect bridges CPU dual masters to single MIG slave
 - **Debug**: ILA cores for reset and calibration signal monitoring
 
@@ -103,21 +107,23 @@ The design uses a modular Vivado block diagram with:
 - **ext_reset_in_0**: External reset button (pin V14, Bank 14, LVCMOS33, ACTIVE-LOW)
 
 #### 2. Clock Wizard (clk_wiz_0)
-**Purpose**: Generate stable 320 MHz clock for MIG system, reference, and reset timer
+**Purpose**: Generate 100 MHz for MIG system clock and 200 MHz reference clock
 
 **Configuration**:
 - Input: 100 MHz from board
-- Primitive: PLL (PLLE2_ADV)
-- **CLKFBOUT_MULT_F**: 32 (VCO = 100 MHz × 32 = 3200 MHz) OR **CLKFBOUT_MULT**: 4, **DIVCLK_DIVIDE**: 1 (VCO = 100 MHz × 4 / 1 = 400 MHz with different multiplier internally)
+- Primitive: MMCM (MMCME2_ADV)
+- **CLKFBOUT_MULT_F**: 10 (VCO = 100 MHz × 10 = 1000 MHz)
+- **DIVCLK_DIVIDE**: 1
 - Outputs:
-  - `CLK_320M_MIG`: 320 MHz → MIG `sys_clk_i`, MIG `clk_ref_i`, AND reset_timer clock
-  - `locked`: HIGH when PLL locked → enables reset_timer
+  - `CLK_MIG_SYS`: 100 MHz (÷10) → MIG `sys_clk_i` AND reset_timer clock
+  - `CLK_REF_200`: 200 MHz (÷5) → MIG `clk_ref_i`
+  - `locked`: HIGH when MMCM locked → enables reset_timer
 
 **Inputs**:
 - `clk_in1`: 100 MHz oscillator
 - `reset`: Active-high reset from NOT gate (inverted ext_reset_in_0)
 
-**Why this frequency**: MIG system clock must be 3000-3300 ps (303-333 MHz). 320 MHz (3125 ps) is within range. Using same clock for sys_clk and ref_clk simplifies design and avoids PLL VCO limit violations.
+**Why these frequencies**: MIG generates 324.99 MHz internally (Clock Period 3077 ps) from the 100 MHz input. The 200 MHz reference clock is MANDATORY for 7-series IDELAYCTRL calibration - DDR3 will not calibrate without it.
 
 #### 3. Reset Conditioning Logic
 
@@ -131,14 +137,14 @@ The design uses a modular Vivado block diagram with:
 - **Type**: Custom Verilog module (`hdl/reset_timer.v`)
 - **Purpose**: Hold MIG `sys_rst` LOW for 200µs during initialization
 - **Parameters**:
-  - `COUNTER_WIDTH`: **17 bits** (supports counts 0-131071)
-  - `HOLD_CYCLES`: **64,000** (64000 × 3.125ns @ 320 MHz = 200µs)
+  - `COUNTER_WIDTH`: **15 bits** (supports counts 0-32767)
+  - `HOLD_CYCLES`: **20,000** (20000 × 10ns @ 100 MHz = 200µs)
 - **Inputs**:
-  - `i_Clock`: CLK_320M_MIG (320 MHz)
-  - `i_Enable`: clk_wiz_0/locked (starts counting when PLL locks)
+  - `i_Clock`: CLK_MIG_SYS (100 MHz)
+  - `i_Enable`: clk_wiz_0/locked (starts counting when MMCM locks)
 - **Output**:
   - `o_Mig_Reset`: ACTIVE-LOW to MIG `sys_rst`
-  - Behavior: LOW during 0→64000 count, HIGH after 64000 (holds HIGH)
+  - Behavior: LOW during 0→20000 count, HIGH after 20000 (holds HIGH)
 - **Direct connection** to MIG sys_rst (no inverter needed—already ACTIVE-LOW)
 
 **Processor System Reset (proc_sys_reset_0)**

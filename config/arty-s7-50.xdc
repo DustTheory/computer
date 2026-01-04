@@ -1,5 +1,5 @@
-set_property PACKAGE_PIN R2 [get_ports clk_in1_0]
-set_property IOSTANDARD SSTL15 [get_ports clk_in1_0]
+set_property PACKAGE_PIN F14 [get_ports clk_in1_0]
+set_property IOSTANDARD LVCMOS33 [get_ports clk_in1_0]
 
 set_property PACKAGE_PIN V14 [get_ports ext_reset_in_0]
 set_property IOSTANDARD LVCMOS33 [get_ports ext_reset_in_0]
@@ -10,6 +10,37 @@ set_property IOSTANDARD LVCMOS33 [get_ports i_Uart_Tx_In_0]
 set_property IOSTANDARD LVCMOS33 [get_ports o_Uart_Rx_Out_0]
 set_property PACKAGE_PIN R12 [get_ports o_Uart_Rx_Out_0]
 
-# Clock routing constraint - allows BACKBONE routing for clock input to MMCM
-# This is required because the clock input pin (R2) and MMCM are in different clock regions
-set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets computer_i/clk_wiz_0/inst/clk_in1_computer_clk_wiz_0_0]
+create_debug_core u_ila_0 ila
+set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_0]
+set_property ALL_PROBE_SAME_MU_CNT 1 [get_debug_cores u_ila_0]
+set_property C_ADV_TRIGGER false [get_debug_cores u_ila_0]
+set_property C_DATA_DEPTH 1024 [get_debug_cores u_ila_0]
+set_property C_EN_STRG_QUAL false [get_debug_cores u_ila_0]
+set_property C_INPUT_PIPE_STAGES 0 [get_debug_cores u_ila_0]
+set_property C_TRIGIN_EN false [get_debug_cores u_ila_0]
+set_property C_TRIGOUT_EN false [get_debug_cores u_ila_0]
+set_property port_width 1 [get_debug_ports u_ila_0/clk]
+connect_debug_port u_ila_0/clk [get_nets [list computer_i/clk_wiz_0/inst/CLK_100]]
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe0]
+set_property port_width 1 [get_debug_ports u_ila_0/probe0]
+connect_debug_port u_ila_0/probe0 [get_nets [list {computer_i/proc_sys_reset_0/peripheral_aresetn[0]}]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe1]
+set_property port_width 1 [get_debug_ports u_ila_0/probe1]
+connect_debug_port u_ila_0/probe1 [get_nets [list {computer_i/proc_sys_reset_0/peripheral_reset[0]}]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe2]
+set_property port_width 1 [get_debug_ports u_ila_0/probe2]
+connect_debug_port u_ila_0/probe2 [get_nets [list computer_i/clk_wiz_0/locked]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe3]
+set_property port_width 1 [get_debug_ports u_ila_0/probe3]
+connect_debug_port u_ila_0/probe3 [get_nets [list computer_i/mig_7series_0/init_calib_complete]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe4]
+set_property port_width 1 [get_debug_ports u_ila_0/probe4]
+connect_debug_port u_ila_0/probe4 [get_nets [list computer_i/reset_timer_0/o_Mig_Reset]]
+set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
+set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
+set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
+connect_debug_port dbg_hub/clk [get_nets u_ila_0_CLK_100]
