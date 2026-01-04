@@ -1,12 +1,12 @@
 # Claude Documentation
 
-**Last updated**: 2026-01-02
+**Last updated**: 2026-01-03
 
 This project includes structured documentation for Claude (AI) and for humans.
 
 ## Documentation Map
 
-**For all tasks**: Start with [documentation-process.md](docs/ai/documentation-process.md) for maintenance rules.
+**CRITICAL - Read on every new chat session**: Read [documentation-process.md](docs/ai/documentation-process.md) immediately at the start of any new conversation. This file contains essential maintenance rules and guidelines that apply to all tasks.
 
 **By topic**:
 - **Architecture**: [cpu-architecture.md](docs/ai/cpu-architecture.md), [memory-map.md](docs/ai/memory-map.md), [axi-interface.md](docs/ai/axi-interface.md)
