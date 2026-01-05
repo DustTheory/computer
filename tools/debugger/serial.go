@@ -256,6 +256,20 @@ func parseResponse(data []byte) string {
 		return "Empty response"
 	}
 
+	// Check for READ_PC response (4 bytes, little-endian PC value)
+	if len(data) == 4 {
+		pc := uint32(data[0]) |
+			(uint32(data[1]) << 8) |
+			(uint32(data[2]) << 16) |
+			(uint32(data[3]) << 24)
+		return fmt.Sprintf("PC = 0x%08X", pc)
+	}
+
+	// Check for PING response (single 0xAA byte)
+	if len(data) == 1 && data[0] == 0xAA {
+		return "PING response (0xAA)"
+	}
+
 	// Try to identify opcode echo
 	if len(data) >= 1 {
 		opcode := OpCode(data[0])

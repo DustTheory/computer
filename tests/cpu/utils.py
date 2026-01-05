@@ -136,12 +136,12 @@ async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
         bit = i_tx_serial.value.integer
         received_byte |= (bit << i)
 
-
-
-    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT)//2)
-    assert i_tx_serial.value.integer == 1, "UART stop bit incorrect."
-        
+    # Wait to middle of stop bit and check
     await ClockCycles(clock, int(UART_CLOCKS_PER_BIT))
+    assert i_tx_serial.value.integer == 1, "UART stop bit incorrect."
+
+    # Wait for rest of stop bit
+    await ClockCycles(clock, int(UART_CLOCKS_PER_BIT)//2)
 
     assert o_tx_done == 1, "UART o_Tx_Done flag not set"
 

@@ -4,12 +4,13 @@ package main
 type OpCode byte
 
 const (
-	op_NOP     OpCode = 0x0
-	op_RESET   OpCode = 0x1
-	op_UNRESET OpCode = 0x2
-	op_HALT    OpCode = 0x3
-	op_UNHALT  OpCode = 0x4
-	op_PING    OpCode = 0x5
+	op_NOP      OpCode = 0x0
+	op_RESET    OpCode = 0x1
+	op_UNRESET  OpCode = 0x2
+	op_HALT     OpCode = 0x3
+	op_UNHALT   OpCode = 0x4
+	op_PING     OpCode = 0x5
+	op_READ_PC  OpCode = 0x6
 )
 
 // String returns the human-readable name of the opcode
@@ -27,6 +28,8 @@ func (o OpCode) String() string {
 		return "UNHALT"
 	case op_PING:
 		return "PING"
+	case op_READ_PC:
+		return "READ_PC"
 	default:
 		return "UNKNOWN"
 	}

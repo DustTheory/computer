@@ -23,6 +23,8 @@ type CPUState struct {
 	resetSet  bool
 	lastPing  time.Time
 	connected bool
+	pc        uint32
+	pcValid   bool
 }
 
 // Model represents the TUI state
@@ -53,6 +55,7 @@ type commandCompleteMsg struct {
 	success bool
 	message string
 	cmd     Command
+	pcValue uint32
 }
 
 type serialDataMsg struct {
@@ -109,7 +112,7 @@ var (
 func initialModel(serialMgr *SerialManager) model {
 	cmdList := []Command{
 		CmdHalt, CmdUnhalt, CmdReset, CmdUnreset,
-		CmdPing, CmdReadRegister, CmdSetRegister,
+		CmdPing, CmdReadPC, CmdReadRegister, CmdSetRegister,
 		CmdJumpToAddress, CmdReadMemory, CmdWriteMemory,
 		CmdFullDump, CmdStatsDump, CmdLoadProgram,
 	}
@@ -129,6 +132,8 @@ func initialModel(serialMgr *SerialManager) model {
 			haltSet:   false,
 			resetSet:  false,
 			connected: false,
+			pc:        0,
+			pcValid:   false,
 		},
 	}
 }
@@ -318,13 +323,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.status = msg.message
 			m.err = nil
+			// Update CPU state based on command
+			m.updateCPUState(msg.cmd, msg.pcValue)
 		}
 	}
 
 	return m, nil
 }
 
-func (m *model) updateCPUState(cmd Command) {
+func (m *model) updateCPUState(cmd Command, pcValue uint32) {
 	switch cmd {
 	case CmdHalt:
 		m.cpuState.haltSet = true
@@ -336,6 +343,9 @@ func (m *model) updateCPUState(cmd Command) {
 		m.cpuState.resetSet = false
 	case CmdPing:
 		m.cpuState.lastPing = time.Now()
+	case CmdReadPC:
+		m.cpuState.pc = pcValue
+		m.cpuState.pcValid = true
 	}
 }
 
@@ -357,12 +367,44 @@ func (m model) executeCommand(cmd Command) tea.Cmd {
 			}
 		}
 
+		// For READ_PC, wait for 4-byte response and parse it
+		if cmd == CmdReadPC {
+			time.Sleep(300 * time.Millisecond) // Give more time for multi-byte response
+
+			// Get the latest responses and look for a 4-byte PC value
+			responses := m.serialMgr.GetResponses()
+			if len(responses) > 0 {
+				lastResp := responses[len(responses)-1]
+				if len(lastResp.Data) >= 4 {
+					// Parse little-endian PC value from last 4 bytes
+					pc := uint32(lastResp.Data[0]) |
+						(uint32(lastResp.Data[1]) << 8) |
+						(uint32(lastResp.Data[2]) << 16) |
+						(uint32(lastResp.Data[3]) << 24)
+
+					return commandCompleteMsg{
+						success: true,
+						message: fmt.Sprintf("✓ PC = 0x%08X", pc),
+						cmd:     cmd,
+						pcValue: pc,
+					}
+				}
+			}
+
+			return commandCompleteMsg{
+				success: false,
+				message: "Failed to read PC value",
+				cmd:     cmd,
+			}
+		}
+
 		// Wait a bit for response
 		time.Sleep(150 * time.Millisecond)
 
 		return commandCompleteMsg{
 			success: true,
 			message: fmt.Sprintf("✓ %s sent", cmd.GetName()),
+			cmd:     cmd,
 		}
 	}
 }
@@ -556,6 +598,15 @@ func (m model) renderCPUState(width int, height int) string {
 		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render("SET"))
 	} else {
 		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("clear"))
+	}
+	s.WriteString("\n\n")
+
+	// Program Counter
+	if m.cpuState.pcValid {
+		pcStr := fmt.Sprintf("📍 PC: 0x%08X", m.cpuState.pc)
+		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("cyan")).Bold(true).Render(pcStr))
+	} else {
+		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("📍 PC: unknown"))
 	}
 	s.WriteString("\n\n")
 

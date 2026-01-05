@@ -22,7 +22,7 @@ localparam REG_WRITE_PC_NEXT = 3;
 localparam REG_WRITE_DMEM = 4;
 localparam REG_WRITE_NONE = 5;
 
-localparam CLOCK_FREQUENCY = 75_757_576;
+localparam CLOCK_FREQUENCY = 81_247_969;
 
 // UART parameters
 localparam UART_BAUD_RATE = 115200;
