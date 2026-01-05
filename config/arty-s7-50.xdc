@@ -3,12 +3,15 @@ set_property IOSTANDARD LVCMOS33 [get_ports clk_in1_0]
 
 set_property PACKAGE_PIN V14 [get_ports ext_reset_in_0]
 set_property IOSTANDARD LVCMOS33 [get_ports ext_reset_in_0]
+set_property PULLTYPE PULLUP [get_ports ext_reset_in_0]
 
 set_property PACKAGE_PIN V12 [get_ports i_Uart_Tx_In_0]
 set_property IOSTANDARD LVCMOS33 [get_ports i_Uart_Tx_In_0]
 
 set_property IOSTANDARD LVCMOS33 [get_ports o_Uart_Rx_Out_0]
 set_property PACKAGE_PIN R12 [get_ports o_Uart_Rx_Out_0]
+
+connect_debug_port u_ila_0/probe3 [get_nets [list {computer_i/proc_sys_reset_0/peripheral_reset[0]}]]
 
 create_debug_core u_ila_0 ila
 set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_0]
@@ -27,19 +30,23 @@ connect_debug_port u_ila_0/probe0 [get_nets [list {computer_i/proc_sys_reset_0/p
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe1]
 set_property port_width 1 [get_debug_ports u_ila_0/probe1]
-connect_debug_port u_ila_0/probe1 [get_nets [list {computer_i/proc_sys_reset_0/peripheral_reset[0]}]]
+connect_debug_port u_ila_0/probe1 [get_nets [list i_Uart_Tx_In_0_IBUF]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe2]
 set_property port_width 1 [get_debug_ports u_ila_0/probe2]
-connect_debug_port u_ila_0/probe2 [get_nets [list computer_i/clk_wiz_0/locked]]
+connect_debug_port u_ila_0/probe2 [get_nets [list computer_i/mig_7series_0/init_calib_complete]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe3]
 set_property port_width 1 [get_debug_ports u_ila_0/probe3]
-connect_debug_port u_ila_0/probe3 [get_nets [list computer_i/mig_7series_0/init_calib_complete]]
+connect_debug_port u_ila_0/probe3 [get_nets [list computer_i/clk_wiz_0/locked]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe4]
 set_property port_width 1 [get_debug_ports u_ila_0/probe4]
-connect_debug_port u_ila_0/probe4 [get_nets [list computer_i/reset_timer_0/o_Mig_Reset]]
+connect_debug_port u_ila_0/probe4 [get_nets [list computer_i/mig_7series_0/ui_clk_sync_rst]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe5]
+set_property port_width 1 [get_debug_ports u_ila_0/probe5]
+connect_debug_port u_ila_0/probe5 [get_nets [list computer_i/util_vector_logic_0_Res]]
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
