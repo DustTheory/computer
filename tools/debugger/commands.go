@@ -11,6 +11,7 @@ const (
 	CmdReadRegister
 	CmdFullDump
 	CmdPing
+	CmdReadPC
 	CmdSetRegister
 	CmdJumpToAddress
 	CmdLoadProgram
@@ -34,6 +35,7 @@ var commands = map[Command]CommandInfo{
 	CmdReadRegister:  {"Read Register", "Read a specific register value", false},
 	CmdFullDump:      {"Full Dump", "Read all registers and memory", false},
 	CmdPing:          {"Ping CPU", "Check if CPU is responsive", true},
+	CmdReadPC:        {"Read PC", "Read program counter value", true},
 	CmdSetRegister:   {"Set Register", "Write value to a register", false},
 	CmdJumpToAddress: {"Jump to Address", "Set PC to specific address", false},
 	CmdLoadProgram:   {"Load Program", "Load program from file", false},
@@ -55,6 +57,8 @@ func (c Command) GetOpCode() (OpCode, bool) {
 		return op_UNRESET, true
 	case CmdPing:
 		return op_PING, true
+	case CmdReadPC:
+		return op_READ_PC, true
 	default:
 		return 0, false
 	}

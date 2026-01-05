@@ -9,6 +9,9 @@ module debug_peripheral (
     input  i_Uart_Tx_In,
     output o_Uart_Rx_Out,
 
+    input [31:0] i_PC,
+    input [31:0] i_Instruction,
+
     output reg o_Halt_Cpu = 0,
     output reg o_Reset_Cpu = 0
 
@@ -36,13 +39,13 @@ module debug_peripheral (
 
   /* ----------------UART_TRANSMITTER---------------- */
 
-  // // Output buffer (FIFO)
-  // reg [7:0] output_buffer[0:255];
-  // reg [7:0] output_buffer_head = 0;
-  // reg [7:0] output_buffer_tail = 0;
+  // Output buffer (FIFO)
+  reg [7:0] output_buffer[0:255];
+  reg [7:0] output_buffer_head = 0;
+  reg [7:0] output_buffer_tail = 0;
 
   reg r_Tx_DV;
-  reg [7:0] r_Tx_Byte;
+  reg [7:0] r_Tx_Byte = 0;
   wire w_Tx_Done;
 
   uart_transmitter uart_transmitter (
@@ -53,6 +56,23 @@ module debug_peripheral (
       .o_Tx_Serial(o_Uart_Rx_Out),
       .o_Tx_Done(w_Tx_Done)
   );
+
+  always @(posedge i_Clock, posedge i_Reset) begin
+    if (i_Reset) begin
+      r_Tx_DV <= 0;
+      r_Tx_Byte <= 0;
+      output_buffer_tail <= 0;
+    end else begin
+      if (!r_Tx_DV && (output_buffer_head != output_buffer_tail)) begin
+        r_Tx_Byte <= output_buffer[output_buffer_tail];
+        r_Tx_DV <= 1;
+        output_buffer_tail <= output_buffer_tail + 1;
+      end else if (w_Tx_Done) begin
+        r_Tx_DV   <= 0;
+        r_Tx_Byte <= 0;
+      end
+    end
+  end
 
   /* ----------------DEBUG PERIPHERAL LOGIC---------------- */
 
@@ -66,9 +86,8 @@ module debug_peripheral (
       r_Op_Code <= 0;
       o_Halt_Cpu <= 0;
       o_Reset_Cpu <= 0;
-      r_Tx_DV <= 0;
-      r_Tx_Byte <= 0;
       r_Exec_Counter <= 0;
+      output_buffer_head <= 0;
     end else begin
       case (r_State)
         s_IDLE: begin
@@ -101,16 +120,44 @@ module debug_peripheral (
               r_State <= s_IDLE;
             end
             op_PING: begin
-              if (r_Exec_Counter == 0) begin
-                r_Tx_Byte <= PING_RESPONSE_BYTE;
-                r_Tx_DV   <= 1;
-              end else if (r_Exec_Counter > 0) begin
-                r_Tx_DV   <= 0;
-                r_Tx_Byte <= 0;
-                if (w_Tx_Done) begin
+              output_buffer[output_buffer_head] <= PING_RESPONSE_BYTE;
+              output_buffer_head <= output_buffer_head + 1;
+              r_State <= s_IDLE;
+            end
+            op_READ_PC: begin
+              case (r_Exec_Counter)
+                0: begin
+                  output_buffer[output_buffer_head] <= i_PC[7:0];
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                1: begin
+                  output_buffer[output_buffer_head] <= i_PC[15:8];
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                2: begin
+                  output_buffer[output_buffer_head] <= i_PC[23:16];
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                3: begin
+                  output_buffer[output_buffer_head] <= i_PC[31:24];
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                default: begin
                   r_State <= s_IDLE;
                 end
-              end
+              endcase
+            end
+            op_WRITE_PC: begin
+              // To be implemented
+              r_State <= s_IDLE;
+            end
+            op_READ_REGISTER: begin
+              // To be implemented
+              r_State <= s_IDLE;
+            end
+            op_WRITE_REGISTER: begin
+              // To be implemented
+              r_State <= s_IDLE;
             end
             default: begin
               r_State <= s_IDLE;

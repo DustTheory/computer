@@ -350,6 +350,10 @@ module cpu (
       .i_Reset(i_Reset),
       .i_Clock(i_Clock),
       .i_Uart_Tx_In(i_Uart_Tx_In),
+
+      .i_PC(r_PC),
+      .i_Instruction(w_Instruction),
+
       .o_Uart_Rx_Out(o_Uart_Rx_Out),
       .o_Halt_Cpu(w_Debug_Stall),
       .o_Reset_Cpu(w_Debug_Reset)
