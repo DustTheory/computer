@@ -9,6 +9,7 @@ module cpu (
     input i_Uart_Tx_In,
 
     output o_Uart_Rx_Out,
+    output o_Pipeline_Flushed,
 
     // AXI INTERFACE FOR DATA MEMORY
     output [31:0] s_data_memory_axil_araddr,
@@ -180,7 +181,7 @@ module cpu (
   instruction_memory_axi instruction_memory (
       .i_Reset(w_Reset),
       .i_Clock(i_Clock),
-      .i_Enable(i_Init_Calib_Complete),
+      .i_Enable_Fetch(w_Enable_Instruction_Fetch),
       .i_Instruction_Addr(r_PC),
       .o_Instruction(w_Instruction),
       .o_Instruction_Valid(w_Instruction_Valid),
@@ -243,7 +244,9 @@ module cpu (
 
   wire w_Reset = i_Reset || w_Debug_Reset;
 
-  wire w_Stall_S1 = w_Debug_Stall || !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
+  wire w_Enable_Instruction_Fetch = i_Init_Calib_Complete && !w_Debug_Stall;
+  wire w_Stall_S1 = !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
+  wire w_Pipeline_Flushed = !w_Instruction_Valid && !r_S2_Valid && !r_S3_Valid;
 
   // Memory interface driven from S2
   memory_axi mem (
@@ -338,7 +341,7 @@ module cpu (
 
   always @(posedge i_Clock) begin
     if (!w_Reset) begin
-      if (!w_Stall_S1 && w_Instruction_Valid) begin
+      if (!w_Stall_S1 && w_Instruction_Valid && w_Enable_Instruction_Fetch) begin
         r_PC <= w_Pc_Alu_Mux_Select ? w_Alu_Result : w_PC_Next;
       end
     end
@@ -357,5 +360,7 @@ module cpu (
       .o_Halt_Cpu(w_Debug_Stall),
       .o_Reset_Cpu(w_Debug_Reset)
   );
+
+  assign o_Pipeline_Flushed = w_Pipeline_Flushed;
 
 endmodule

@@ -24,6 +24,8 @@ localparam REG_WRITE_NONE = 5;
 
 localparam CLOCK_FREQUENCY = 81_247_969;
 
+localparam ROM_BOUNDARY_ADDR = 32'hFFF;
+
 // UART parameters
 localparam UART_BAUD_RATE = 115200;
 localparam UART_CLOCKS_PER_BIT = (CLOCK_FREQUENCY / UART_BAUD_RATE);

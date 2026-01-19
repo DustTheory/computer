@@ -4,11 +4,10 @@
 module instruction_memory_axi (
     input i_Reset,
     input i_Clock,
-    input i_Enable,
+    input i_Enable_Fetch, // Allows new fetch commands to be issued
     input [XLEN-1:0] i_Instruction_Addr,
     output reg [XLEN-1:0] o_Instruction,
     output o_Instruction_Valid,
-    output o_Fetch_Busy,
 
     // AXI INTERFACE
     output [31:0] s_axil_araddr,
@@ -29,7 +28,7 @@ module instruction_memory_axi (
     output s_axil_bready
 );
 
-  reg [31:0] rom[0:1023];  // 4KB ROM Instruction Memory
+  reg [31:0] rom[0:(ROM_BOUNDARY_ADDR>>2)];  // ROM Instruction Memory
 
   initial begin
     $readmemh("rom.mem", rom);
@@ -45,13 +44,15 @@ module instruction_memory_axi (
   always @(posedge i_Clock, posedge i_Reset) begin
     if (i_Reset) begin
       r_State <= IDLE;
-    end else if (i_Enable) begin
+    end else begin
       case (r_State)
         IDLE: begin
-          if (i_Instruction_Addr > 32'hFFF) begin
-            r_State <= READ_SUBMITTING;
-          end else begin
-            r_State <= READ_SUCCESS;
+          if (i_Enable_Fetch) begin
+            if (i_Instruction_Addr > ROM_BOUNDARY_ADDR) begin
+              r_State <= READ_SUBMITTING;
+            end else begin
+              r_State <= READ_SUCCESS;
+            end
           end
         end
         READ_SUBMITTING: begin
@@ -75,17 +76,16 @@ module instruction_memory_axi (
   end
 
   assign o_Instruction_Valid = (r_State == READ_SUCCESS);
-  assign o_Fetch_Busy = (r_State != IDLE);
+  // assign o_Fetch_Busy = (r_State != IDLE);
 
   always @(*) begin
-    if (i_Instruction_Addr <= 32'hFFF) begin
+    if (i_Instruction_Addr <= ROM_BOUNDARY_ADDR && i_Enable_Fetch) begin
       o_Instruction = rom[i_Instruction_Addr[11:2]];
     end else if (r_State == READ_SUCCESS) begin
       o_Instruction = s_axil_rdata;
     end else begin
       o_Instruction = 32'b0;
     end
-
   end
 
   assign s_axil_araddr  = i_Instruction_Addr[31:0];

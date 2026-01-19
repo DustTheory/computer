@@ -41,7 +41,7 @@ module cpu_unit_tests_harness ();
   instruction_memory_axi instruction_memory_axi (
       .i_Clock(i_Clock),
       .i_Reset(i_Reset),
-      .i_Enable(1'b1),
+      .i_Enable_Fetch(1'b1),
       .s_axil_araddr(s_instruction_memory_axil_araddr),
       .s_axil_arvalid(s_instruction_memory_axil_arvalid),
       .s_axil_arready(s_instruction_memory_axil_arready),
