@@ -10,7 +10,6 @@ module debug_peripheral (
     output o_Uart_Rx_Out,
 
     input [31:0] i_PC,
-    input [31:0] i_Instruction,
 
     output reg o_Halt_Cpu = 0,
     output reg o_Reset_Cpu = 0
