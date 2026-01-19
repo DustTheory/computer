@@ -9,7 +9,6 @@ module cpu (
     input i_Uart_Tx_In,
 
     output o_Uart_Rx_Out,
-    output o_Pipeline_Flushed,
 
     // AXI INTERFACE FOR DATA MEMORY
     output [31:0] s_data_memory_axil_araddr,
@@ -48,6 +47,12 @@ module cpu (
     output s_instruction_memory_axil_bready
 );
 
+  // Debug peripheral wires
+  wire w_Debug_Reg_Read_Enable;
+  wire [4:0] w_Debug_Reg_Read_Addr;
+  wire w_Debug_Reset;
+  wire w_Debug_Stall;
+
   wire w_Instruction_Valid;
 
   reg [XLEN-1:0] r_PC;  // Program Counter
@@ -85,7 +90,7 @@ module cpu (
   wire w_Reg_Write_Enable;  // Enables writing to the register file
   wire w_Mem_Write_Enable;  // Enables writing to memory (not used in this example)
 
-  wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Instruction[19:15];
+  wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Debug_Reg_Read_Enable ? w_Debug_Reg_Read_Addr : w_Instruction[19:15];
   wire [REG_ADDR_WIDTH-1:0] w_Rs_2 = w_Instruction[24:20];
 
   // Stage2 (Memory/Wait) pipeline registers
@@ -239,9 +244,6 @@ module cpu (
   wire w_Mem_Write_Done = (w_Memory_State == WRITE_SUCCESS);
   wire w_Mem_Busy = (w_Memory_State != IDLE);
 
-  wire w_Debug_Stall;
-  wire w_Debug_Reset;
-
   wire w_Reset = i_Reset || w_Debug_Reset;
 
   wire w_Enable_Instruction_Fetch = i_Init_Calib_Complete && !w_Debug_Stall;
@@ -355,12 +357,15 @@ module cpu (
       .i_Uart_Tx_In(i_Uart_Tx_In),
 
       .i_PC(r_PC),
+      .i_Pipeline_Flushed(w_Pipeline_Flushed),
 
       .o_Uart_Rx_Out(o_Uart_Rx_Out),
       .o_Halt_Cpu(w_Debug_Stall),
-      .o_Reset_Cpu(w_Debug_Reset)
-  );
+      .o_Reset_Cpu(w_Debug_Reset),
 
-  assign o_Pipeline_Flushed = w_Pipeline_Flushed;
+      .o_Reg_Read_Enable(w_Debug_Reg_Read_Enable),
+      .o_Reg_Read_Addr(w_Debug_Reg_Read_Addr),
+      .i_Reg_Read_Data(w_Reg_Source_1)
+  );
 
 endmodule

@@ -10,17 +10,18 @@ module debug_peripheral (
     output o_Uart_Rx_Out,
 
     input [31:0] i_PC,
+    input i_Pipeline_Flushed,
 
     output reg o_Halt_Cpu = 0,
-    output reg o_Reset_Cpu = 0
+    output reg o_Reset_Cpu = 0,
 
     // output o_Reg_Write_Enable,
     // output [4:0] o_Reg_Write_Addr,
     // output [31:0] o_Reg_Write_Data,
 
-    // output o_Reg_Read_Enable,
-    // output [4:0] o_Reg_Read_Addr,
-    // input [31:0] i_Reg_Read_Data
+    output reg o_Reg_Read_Enable,
+    output reg [4:0] o_Reg_Read_Addr,
+    input [31:0] i_Reg_Read_Data
 
 );
 
@@ -152,7 +153,22 @@ module debug_peripheral (
             end
             op_READ_REGISTER: begin
               // To be implemented
-              r_State <= s_IDLE;
+              o_Halt_Cpu <= 1;
+              if (i_Pipeline_Flushed) begin
+                // Read register
+                o_Reg_Read_Enable <= 1;
+                o_Reg_Read_Addr <= 5'd1; // Assume register with address 1
+                if(o_Reg_Read_Enable) begin
+                  // Already got reg data, write it to the output
+                  output_buffer[output_buffer_head] <= i_Reg_Read_Data[7:0];
+                  output_buffer[output_buffer_head + 1] <= i_Reg_Read_Data[15:8];
+                  output_buffer[output_buffer_head + 2] <= i_Reg_Read_Data[23:16];
+                  output_buffer[output_buffer_head + 3] <= i_Reg_Read_Data[31:24];
+                  output_buffer_head <= output_buffer_head + 4;
+                  o_Reg_Read_Enable <= 0;
+                  r_State <= s_IDLE;
+                end;  
+              end
             end
             op_WRITE_REGISTER: begin
               // To be implemented
