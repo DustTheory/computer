@@ -1,6 +1,6 @@
 import cocotb
 from cpu.utils import uart_send_byte, uart_wait_for_byte
-from cpu.constants import DEBUG_OP_READ_REGISTER, DEBUG_OP_HALT, DEBUG_OP_UNHALT
+from cpu.constants import DEBUG_OP_READ_REGISTER
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
@@ -20,10 +20,6 @@ async def test_read_register_basic(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
-
-    # Halt CPU to ensure stable state (like READ_PC test)
-    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
-    await ClockCycles(dut.i_Clock, 10)
 
     # Test with register 1 for basic functionality
     test_register = 1
@@ -106,10 +102,6 @@ async def test_read_register_doesnt_break_cpu(dut):
     # Save PC before command
     initial_pc = dut.cpu.r_PC.value.integer
 
-    # Halt CPU
-    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
-    await ClockCycles(dut.i_Clock, 10)
-
     # Send READ_REGISTER command: opcode + register address (test with register 2)
     test_register = 2
     await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_READ_REGISTER)
@@ -129,13 +121,7 @@ async def test_read_register_doesnt_break_cpu(dut):
         current_value = dut.cpu.reg_file.Registers[reg_addr].value.integer
         assert current_value == expected_value, f"Register {reg_addr} changed! Expected {expected_value:#010x}, got {current_value:#010x}"
 
-    # Unhalt CPU to verify it continues execution normally
-    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
-    await ClockCycles(dut.i_Clock, 10)
 
-    # CPU should continue execution (this proves it's not broken)
-    final_pc = dut.cpu.r_PC.value.integer
-    # As long as we got here without crashing, the CPU works fine
 
 @cocotb.test()
 async def test_read_register_loop_ready(dut):
@@ -160,11 +146,7 @@ async def test_read_register_loop_ready(dut):
     }
 
     for reg_addr in REGISTERS_TO_TEST:  # Currently only [1]
-        # Halt CPU first (like working tests)
-        await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
-        await ClockCycles(dut.i_Clock, 10)
-
-        # Set register to known value after halting (except register 0 which is always 0)
+        # Set register to known value (except register 0 which is always 0)
         test_value = test_data.get(reg_addr, 0xABCDEF00 + reg_addr)
         if reg_addr != 0:  # Can't write to register 0 in RISC-V
             dut.cpu.reg_file.Registers[reg_addr].value = test_value
@@ -192,7 +174,3 @@ async def test_read_register_loop_ready(dut):
 
         # Verify the register was read correctly
         assert received_value == expected_value, f"Register {reg_addr}: expected {expected_value:#010x}, got {received_value:#010x}"
-
-        # Unhalt for next iteration (if any)
-        await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
-        await ClockCycles(dut.i_Clock, 5)
