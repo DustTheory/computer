@@ -53,6 +53,8 @@ module cpu (
   wire w_Debug_Reg_Write_Enable;
   wire [4:0] w_Debug_Reg_Write_Addr;
   wire [31:0] w_Debug_Reg_Write_Data;
+  wire w_Debug_Write_PC_Enable;
+  wire [31:0] w_Debug_Write_PC_Data;
   wire w_Debug_Reset;
   wire w_Debug_Stall;
 
@@ -346,7 +348,9 @@ module cpu (
 
   always @(posedge i_Clock) begin
     if (!w_Reset) begin
-      if (!w_Stall_S1 && w_Instruction_Valid && w_Enable_Instruction_Fetch) begin
+      if(w_Debug_Write_PC_Enable && w_Pipeline_Flushed) begin
+        r_PC <= w_Debug_Write_PC_Data;
+      end else if (!w_Stall_S1 && w_Instruction_Valid && w_Enable_Instruction_Fetch) begin
         r_PC <= w_Pc_Alu_Mux_Select ? w_Alu_Result : w_PC_Next;
       end
     end
@@ -372,7 +376,10 @@ module cpu (
 
       .o_Reg_Write_Enable(w_Debug_Reg_Write_Enable),
       .o_Reg_Write_Addr(w_Debug_Reg_Write_Addr),
-      .o_Reg_Write_Data(w_Debug_Reg_Write_Data)
+      .o_Reg_Write_Data(w_Debug_Reg_Write_Data),
+
+      .o_Write_PC_Enable(w_Debug_Write_PC_Enable),
+      .o_Write_PC_Data(w_Debug_Write_PC_Data)
   );
 
 endmodule

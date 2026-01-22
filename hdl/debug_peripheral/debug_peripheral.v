@@ -12,8 +12,8 @@ module debug_peripheral (
     input [31:0] i_PC,
     input i_Pipeline_Flushed,
 
-    output reg o_Halt_Cpu = 0,
-    output reg o_Reset_Cpu = 0,
+    output reg o_Halt_Cpu,
+    output reg o_Reset_Cpu,
 
     output o_Reg_Write_Enable,
     output [4:0] o_Reg_Write_Addr,
@@ -21,7 +21,10 @@ module debug_peripheral (
 
     output reg o_Reg_Read_Enable,
     output reg [4:0] o_Reg_Read_Addr,
-    input [31:0] i_Reg_Read_Data
+    input [31:0] i_Reg_Read_Data,
+
+    output reg o_Write_PC_Enable,
+    output reg [31:0] o_Write_PC_Data
 
 );
 
@@ -93,6 +96,8 @@ module debug_peripheral (
       r_Exec_Counter <= 0;
       output_buffer_head <= 0;
       input_buffer_head <= 0;
+      o_Write_PC_Enable <= 0;
+      o_Write_PC_Data <= 0;
     end else begin
       case (r_State)
         s_IDLE: begin
@@ -154,11 +159,22 @@ module debug_peripheral (
               endcase
             end
             op_WRITE_PC: begin
-              // To be implemented
-              r_State <= s_IDLE;
+              o_Halt_Cpu <= 1;
+              if(w_Rx_DV) begin
+                input_buffer[input_buffer_head] <= w_Rx_Byte;
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if (i_Pipeline_Flushed && input_buffer_head == 4) begin
+                o_Write_PC_Enable <= 1;
+                o_Write_PC_Data <= {input_buffer[3], input_buffer[2], input_buffer[1], input_buffer[0]};
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if (i_Pipeline_Flushed && input_buffer_head == 5) begin
+                o_Write_PC_Enable <= 0;
+                r_State <= s_IDLE;
+              end
             end
             op_READ_REGISTER: begin
-              // To be implemented
               o_Halt_Cpu <= 1;
               if(w_Rx_DV) begin
                 input_buffer[input_buffer_head] <= w_Rx_Byte;

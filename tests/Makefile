@@ -25,7 +25,8 @@ CPU_UNIT_TESTS_MODULE = "cpu.unit_tests.test_arithmetic_logic_unit, \
 
 CPU_INTEGRATION_TESTS_TOPLEVEL = cpu_integration_tests_harness
 CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_debug_read_register, \
-		  cpu.integration_tests.test_debug_write_register"	
+		  cpu.integration_tests.test_debug_write_register, \
+		  cpu.integration_tests.test_debug_write_pc"	
 
 
 TEST_TYPE ?= unit  
