@@ -15,9 +15,9 @@ module debug_peripheral (
     output reg o_Halt_Cpu = 0,
     output reg o_Reset_Cpu = 0,
 
-    // output o_Reg_Write_Enable,
-    // output [4:0] o_Reg_Write_Addr,
-    // output [31:0] o_Reg_Write_Data,
+    output o_Reg_Write_Enable,
+    output [4:0] o_Reg_Write_Addr,
+    output [31:0] o_Reg_Write_Data,
 
     output reg o_Reg_Read_Enable,
     output reg [4:0] o_Reg_Read_Addr,
@@ -38,6 +38,10 @@ module debug_peripheral (
   );
 
   /* ----------------UART_TRANSMITTER---------------- */
+
+  // Input buffer (Stack)
+  reg [7:0] input_buffer[0:255];
+  reg [7:0] input_buffer_head = 0;
 
   // Output buffer (FIFO)
   reg [7:0] output_buffer[0:255];
@@ -88,6 +92,7 @@ module debug_peripheral (
       o_Reset_Cpu <= 0;
       r_Exec_Counter <= 0;
       output_buffer_head <= 0;
+      input_buffer_head <= 0;
     end else begin
       case (r_State)
         s_IDLE: begin
@@ -95,6 +100,7 @@ module debug_peripheral (
             r_Op_Code <= w_Rx_Byte;
             r_State <= s_DECODE_AND_EXECUTE;
             r_Exec_Counter <= 0;
+            input_buffer_head <= 0;
           end
         end
         s_DECODE_AND_EXECUTE: begin
@@ -154,10 +160,14 @@ module debug_peripheral (
             op_READ_REGISTER: begin
               // To be implemented
               o_Halt_Cpu <= 1;
-              if (i_Pipeline_Flushed) begin
+              if(w_Rx_DV) begin
+                input_buffer[input_buffer_head] <= w_Rx_Byte;
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if (i_Pipeline_Flushed && input_buffer_head > 0) begin
                 // Read register
                 o_Reg_Read_Enable <= 1;
-                o_Reg_Read_Addr <= 5'd1; // Assume register with address 1
+                o_Reg_Read_Addr <= input_buffer[0][4:0];
                 if(o_Reg_Read_Enable) begin
                   // Already got reg data, write it to the output
                   output_buffer[output_buffer_head] <= i_Reg_Read_Data[7:0];
@@ -171,8 +181,21 @@ module debug_peripheral (
               end
             end
             op_WRITE_REGISTER: begin
-              // To be implemented
-              r_State <= s_IDLE;
+              o_Halt_Cpu <= 1;
+              if(w_Rx_DV) begin
+                input_buffer[input_buffer_head] <= w_Rx_Byte;
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if (i_Pipeline_Flushed && input_buffer_head == 5) begin
+                o_Reg_Write_Enable <= 1;
+                o_Reg_Write_Addr <= input_buffer[0][4:0];
+                o_Reg_Write_Data <= {input_buffer[4], input_buffer[3], input_buffer[2], input_buffer[1]};
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if (i_Pipeline_Flushed && input_buffer_head == 6) begin
+                o_Reg_Write_Enable <= 0;
+                r_State <= s_IDLE;
+              end
             end
             default: begin
               r_State <= s_IDLE;

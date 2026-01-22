@@ -50,6 +50,9 @@ module cpu (
   // Debug peripheral wires
   wire w_Debug_Reg_Read_Enable;
   wire [4:0] w_Debug_Reg_Read_Addr;
+  wire w_Debug_Reg_Write_Enable;
+  wire [4:0] w_Debug_Reg_Write_Addr;
+  wire [31:0] w_Debug_Reg_Write_Data;
   wire w_Debug_Reset;
   wire w_Debug_Stall;
 
@@ -147,13 +150,13 @@ module cpu (
 
   register_file reg_file (
       .i_Reset(w_Reset),
-      .i_Enable(w_Instruction_Valid || w_Wb_Enable),
+      .i_Enable(w_Instruction_Valid || w_Wb_Enable || w_Debug_Reg_Write_Enable),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
       .i_Read_Addr_2(w_Rs_2),
-      .i_Write_Addr(r_S3_Rd),
-      .i_Write_Data(w_Wb_Data),
-      .i_Write_Enable(w_Wb_Enable),
+      .i_Write_Addr(w_Debug_Reg_Write_Enable ? w_Debug_Reg_Write_Addr : r_S3_Rd),
+      .i_Write_Data(w_Debug_Reg_Write_Enable ? w_Debug_Reg_Write_Data : w_Wb_Data),
+      .i_Write_Enable(w_Debug_Reg_Write_Enable || w_Wb_Enable),
       .o_Read_Data_1(w_Reg_Source_1),
       .o_Read_Data_2(w_Reg_Source_2)
   );
@@ -365,7 +368,11 @@ module cpu (
 
       .o_Reg_Read_Enable(w_Debug_Reg_Read_Enable),
       .o_Reg_Read_Addr(w_Debug_Reg_Read_Addr),
-      .i_Reg_Read_Data(w_Reg_Source_1)
+      .i_Reg_Read_Data(w_Reg_Source_1),
+
+      .o_Reg_Write_Enable(w_Debug_Reg_Write_Enable),
+      .o_Reg_Write_Addr(w_Debug_Reg_Write_Addr),
+      .o_Reg_Write_Data(w_Debug_Reg_Write_Data)
   );
 
 endmodule

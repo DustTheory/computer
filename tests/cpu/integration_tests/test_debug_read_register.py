@@ -6,12 +6,12 @@ from cocotb.triggers import ClockCycles
 
 wait_ns = 1
 
-# Future-ready: extend to [0,1,2,...,31] when full implementation is ready
-REGISTERS_TO_TEST = [1]  # Currently only register 1 is implemented
+# Test multiple registers now that full implementation is ready
+REGISTERS_TO_TEST = [0, 1, 2, 5, 10, 31]  # Test representative registers including edge cases
 
 @cocotb.test()
 async def test_read_register_basic(dut):
-    """Test debug peripheral READ_REGISTER command returns register 1 value in little-endian format"""
+    """Test debug peripheral READ_REGISTER command with register address parameter"""
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -25,15 +25,17 @@ async def test_read_register_basic(dut):
     await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
     await ClockCycles(dut.i_Clock, 10)
 
-    # Set register 1 to a known test value after halting
+    # Test with register 1 for basic functionality
+    test_register = 1
     test_value = 0xDEADBEEF
-    dut.cpu.reg_file.Registers[1].value = test_value
+    dut.cpu.reg_file.Registers[test_register].value = test_value
 
-    # Get the current register 1 value directly from the CPU (like READ_PC test pattern)
-    expected_reg_value = dut.cpu.reg_file.Registers[1].value.integer
+    # Get the expected value
+    expected_reg_value = dut.cpu.reg_file.Registers[test_register].value.integer
 
-    # Send READ_REGISTER command
+    # Send READ_REGISTER command: opcode + register address
     await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_READ_REGISTER)
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, test_register)
     await ClockCycles(dut.i_Clock, 6)
 
     # Receive 4 bytes in little-endian format
@@ -108,8 +110,10 @@ async def test_read_register_doesnt_break_cpu(dut):
     await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
     await ClockCycles(dut.i_Clock, 10)
 
-    # Send READ_REGISTER command
+    # Send READ_REGISTER command: opcode + register address (test with register 2)
+    test_register = 2
     await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_READ_REGISTER)
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, test_register)
     await ClockCycles(dut.i_Clock, 6)
 
     # Consume the 4 response bytes (don't need to verify content here)
@@ -135,7 +139,7 @@ async def test_read_register_doesnt_break_cpu(dut):
 
 @cocotb.test()
 async def test_read_register_loop_ready(dut):
-    """Test with loop structure ready for future expansion (currently only tests register 1)"""
+    """Test reading multiple registers using the loop structure"""
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -145,13 +149,14 @@ async def test_read_register_loop_ready(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
-    # Test data for each register (future-ready)
+    # Test data for each register
     test_data = {
-        1: 0x12345678,  # Currently only this one is tested
-        # Future expansion:
-        # 2: 0x87654321,
-        # 3: 0xDEADBEEF,
-        # ...
+        0: 0x00000000,  # Register 0 should always be 0 (will test this)
+        1: 0x12345678,
+        2: 0x87654321,
+        5: 0xDEADBEEF,
+        10: 0xCAFEBABE,
+        31: 0xFFFFFFFF
     }
 
     for reg_addr in REGISTERS_TO_TEST:  # Currently only [1]
@@ -159,15 +164,17 @@ async def test_read_register_loop_ready(dut):
         await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
         await ClockCycles(dut.i_Clock, 10)
 
-        # Set register to known value after halting
+        # Set register to known value after halting (except register 0 which is always 0)
         test_value = test_data.get(reg_addr, 0xABCDEF00 + reg_addr)
-        dut.cpu.reg_file.Registers[reg_addr].value = test_value
+        if reg_addr != 0:  # Can't write to register 0 in RISC-V
+            dut.cpu.reg_file.Registers[reg_addr].value = test_value
 
-        # Get expected value right after setting it (like basic test pattern)
-        expected_value = dut.cpu.reg_file.Registers[1].value.integer
+        # Get expected value (register 0 is always 0, others should be test_value)
+        expected_value = 0 if reg_addr == 0 else dut.cpu.reg_file.Registers[reg_addr].value.integer
 
-        # Send READ_REGISTER command (currently reads register 1 regardless of reg_addr)
+        # Send READ_REGISTER command: opcode + register address
         await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_READ_REGISTER)
+        await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, reg_addr)
         await ClockCycles(dut.i_Clock, 6)
 
         # Receive 4 bytes
@@ -183,8 +190,8 @@ async def test_read_register_loop_ready(dut):
         # Reconstruct value
         received_value = bytes_received[0] | (bytes_received[1] << 8) | (bytes_received[2] << 16) | (bytes_received[3] << 24)
 
-        # Since current implementation always reads register 1, verify against expected value
-        assert received_value == expected_value, f"Loop iteration {reg_addr}: expected {expected_value:#010x}, got {received_value:#010x}"
+        # Verify the register was read correctly
+        assert received_value == expected_value, f"Register {reg_addr}: expected {expected_value:#010x}, got {received_value:#010x}"
 
         # Unhalt for next iteration (if any)
         await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
