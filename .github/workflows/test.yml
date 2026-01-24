@@ -1,4 +1,4 @@
-name: Test with Coverage
+name: Test
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  test-coverage:
+  test:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -42,23 +42,15 @@ jobs:
           cd tests
           pip install -r requirements.txt
 
-      - name: Run ${{ matrix.test-type }} tests with coverage
+      - name: Run ${{ matrix.test-type }} tests
         id: test
         continue-on-error: true
         run: |
           cd tests
           make clean TEST_TYPE=${{ matrix.test-type }}
-          make TEST_TYPE=${{ matrix.test-type }} COVERAGE_FLAGS="--coverage-line --coverage-toggle" 2>&1 | tee test-output.log
+          make TEST_TYPE=${{ matrix.test-type }} 2>&1 | tee test-output.log
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.test-type }}
-          path: tests/results.xml
-          retention-days: 30
-
-      - name: Generate test and coverage summary for job
+      - name: Generate test summary for job
         if: always()
         run: |
           cd tests
@@ -71,15 +63,6 @@ jobs:
           else
             echo "Test output not found" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          # Extract and print coverage percentage
-          COVERAGE=$(verilator_coverage --rank coverage.dat | grep -oP 'Total.*\(\d+/\d+\)\s+\K\d+\.\d+' | head -1 || echo "0")
-          echo "### ${{ matrix.test-type }} Coverage" >> $GITHUB_STEP_SUMMARY
-          echo "**Total Coverage: ${COVERAGE}%**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          verilator_coverage --rank coverage.dat 2>/dev/null | head -10 >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Publish test results
