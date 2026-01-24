@@ -10,7 +10,9 @@ module control_unit (
     input [OP_CODE_WIDTH:0] i_Op_Code,
     input [FUNC3_WIDTH:0] i_Funct3,
     input i_Funct7_Bit_5,
+    /* verilator lint_off UNOPTFLAT */
     input i_Branch_Enable,
+    /* verilator lint_on UNOPTFLAT */
     output reg o_Port_A_Select,
     output reg o_Port_B_Select,
     output reg [REG_ADDR_WIDTH-1:0] o_Reg_Write_Select,
