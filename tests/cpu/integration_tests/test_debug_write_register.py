@@ -1,6 +1,6 @@
 import cocotb
-from cpu.utils import uart_send_byte, uart_wait_for_byte
-from cpu.constants import DEBUG_OP_WRITE_REGISTER, DEBUG_OP_READ_REGISTER
+from cpu.utils import uart_send_byte, uart_wait_for_byte, wait_for_pipeline_flush
+from cpu.constants import DEBUG_OP_WRITE_REGISTER, DEBUG_OP_READ_REGISTER, DEBUG_OP_HALT, DEBUG_OP_UNHALT
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
@@ -179,6 +179,10 @@ async def test_write_register_cpu_stability(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
+    # HALT CPU before setup
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
+    await wait_for_pipeline_flush(dut)
+
     # Set up initial register values for comparison
     initial_values = {
         3: 0x33333333,
@@ -187,11 +191,14 @@ async def test_write_register_cpu_stability(dut):
         8: 0x88888888,
     }
 
-    # Set initial values
+    # Set initial values while CPU is halted
     for reg_addr, value in initial_values.items():
         dut.cpu.reg_file.Registers[reg_addr].value = value
 
-    # Perform write operation on register 1 (shouldn't affect others)
+    # Wait for values to propagate
+    await ClockCycles(dut.i_Clock, 1)
+
+    # Perform write operation on register 1 (CPU stays halted - WRITE_REGISTER works with halted CPU)
     test_value = 0xDEADBEEF
     await send_write_register_command(dut, 1, test_value)
     await ClockCycles(dut.i_Clock, 50)
@@ -208,6 +215,10 @@ async def test_write_register_cpu_stability(dut):
     # Verify register 0 is still 0
     reg0_value = dut.cpu.reg_file.Registers[0].value.integer
     assert reg0_value == 0, f"Register 0 changed! Should be 0, got {reg0_value:#010x}"
+
+    # UNHALT CPU at end to restore normal state
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
+    await ClockCycles(dut.i_Clock, 3)
 
 
 

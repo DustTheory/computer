@@ -155,7 +155,7 @@ module cpu (
 
   register_file reg_file (
       .i_Reset(w_Reset),
-      .i_Enable(w_Instruction_Valid || w_Wb_Enable || w_Debug_Reg_Write_Enable),
+      .i_Enable(w_Instruction_Valid || w_Wb_Enable || w_Debug_Reg_Write_Enable || w_Debug_Reg_Read_Enable),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
       .i_Read_Addr_2(w_Rs_2),

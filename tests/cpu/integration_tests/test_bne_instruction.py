@@ -6,12 +6,16 @@ from cpu.utils import (
     gen_b_type_instruction,
     gen_i_type_instruction,
     write_word_to_mem,
+    uart_send_byte,
+    wait_for_pipeline_flush,
 )
 from cpu.constants import (
     FUNC3_BRANCH_BNE,
     FUNC3_ALU_ADD_SUB,
     OP_I_TYPE_ALU,
-    ROM_BOUNDARY_ADDR
+    ROM_BOUNDARY_ADDR,
+    DEBUG_OP_HALT,
+    DEBUG_OP_UNHALT,
 )
 
 wait_ns = 1
@@ -39,15 +43,26 @@ async def test_bne_instruction_when_not_equal(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
+    # HALT CPU before setup
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
+    await wait_for_pipeline_flush(dut)
+
     # Write instructions to memory before setting PC
     write_word_to_mem(dut.instruction_ram.mem, start_address, bne_instruction)
     write_word_to_mem(dut.instruction_ram.mem, start_address + 4, poison_instruction)
-    await ClockCycles(dut.i_Clock, 3)
 
+    # Set PC and registers while CPU is halted
     dut.cpu.r_PC.value = start_address
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
     dut.cpu.reg_file.Registers[rd_poison].value = 0
+
+    # Wait for values to propagate
+    await ClockCycles(dut.i_Clock, 1)
+
+    # UNHALT CPU to start execution
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
+    await ClockCycles(dut.i_Clock, 3)
 
     # Track pipeline flush signals
     flush_pipeline_seen = False
@@ -100,6 +115,11 @@ async def test_bne_instruction_when_equal(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
+    # HALT CPU before setup
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
+    await wait_for_pipeline_flush(dut)
+
+    # Set PC and write instructions while CPU is halted
     dut.cpu.r_PC.value = start_address
     write_word_to_mem(dut.instruction_ram.mem, start_address, bne_instruction)
     write_word_to_mem(dut.instruction_ram.mem, start_address + 4, next_instruction)
@@ -107,6 +127,13 @@ async def test_bne_instruction_when_equal(dut):
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
     dut.cpu.reg_file.Registers[rd_next].value = 0
+
+    # Wait for values to propagate
+    await ClockCycles(dut.i_Clock, 1)
+
+    # UNHALT CPU to start execution
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
+    await ClockCycles(dut.i_Clock, 3)
 
     # Track pipeline flush signals
     flush_pipeline_seen = False
