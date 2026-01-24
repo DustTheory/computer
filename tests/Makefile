@@ -9,6 +9,8 @@ INC_DIR = $(CURDIR)/../hdl_inc/
 VERILOG_SOURCES = $(shell find $(SRC_DIR) -type f -name "*.v" -o -name "*.vh")
 VERILATOR_INCLUDE_DIRS = $(shell find $(SRC_DIR) -type d) $(shell find $(INC_DIR) -type d)
 EXTRA_ARGS += $(addprefix -I, $(VERILATOR_INCLUDE_DIRS))
+COVERAGE_FLAGS ?=
+EXTRA_ARGS += $(COVERAGE_FLAGS)
 
 CPU_UNIT_TESTS_TOPLEVEL = cpu_unit_tests_harness
 

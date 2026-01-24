@@ -1,0 +1,228 @@
+name: Test with Coverage
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        test-type: [unit, integration]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup OSS CAD Suite (Verilator)
+        uses: YosysHQ/setup-oss-cad-suite@v3
+
+      - name: Verify Verilator installation
+        run: verilator --version
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: tests/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          cd tests
+          pip install -r requirements.txt
+
+      - name: Run ${{ matrix.test-type }} tests with coverage
+        id: test
+        continue-on-error: true
+        run: |
+          cd tests
+          make clean TEST_TYPE=${{ matrix.test-type }}
+          make TEST_TYPE=${{ matrix.test-type }} COVERAGE_FLAGS="--coverage-line --coverage-toggle" 2>&1 | tee test-output.log
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test-type }}
+          path: tests/results.xml
+          retention-days: 30
+
+      - name: Generate test summary for job
+        if: always()
+        run: |
+          cd tests
+          echo "## ${{ matrix.test-type }} Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if grep -q "TESTS=" test-output.log; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            grep "TESTS=" test-output.log | tail -1 >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Test output not found" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-${{ matrix.test-type }}
+          path: tests/coverage.dat
+          retention-days: 90
+
+      - name: Generate annotated source coverage
+        if: always()
+        run: |
+          cd tests
+          verilator_coverage --annotate ../coverage-annotated-${{ matrix.test-type }} \
+            --annotate-all \
+            coverage.dat || true
+
+      - name: Generate LCOV info
+        if: always()
+        run: |
+          cd tests
+          verilator_coverage --write-info ../coverage-${{ matrix.test-type }}.info \
+            coverage.dat || true
+
+      - name: Add coverage to job summary
+        if: always()
+        run: |
+          cd tests
+          echo "### ${{ matrix.test-type }} Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          verilator_coverage --rank coverage.dat 2>/dev/null | head -10 >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload annotated coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-annotated-${{ matrix.test-type }}
+          path: coverage-annotated-${{ matrix.test-type }}
+          retention-days: 90
+
+      - name: Upload LCOV coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov-${{ matrix.test-type }}
+          path: coverage-${{ matrix.test-type }}.info
+          retention-days: 90
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: tests/results.xml
+          check_name: Test Results (${{ matrix.test-type }})
+
+      - name: Fail if tests failed
+        if: steps.test.outcome == 'failure'
+        run: exit 1
+
+  merge-coverage:
+    runs-on: ubuntu-22.04
+    needs: test-coverage
+    if: always()
+
+    steps:
+      - name: Setup OSS CAD Suite
+        uses: YosysHQ/setup-oss-cad-suite@v3
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-data-unit
+          path: ./
+
+      - name: Download integration coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-data-integration
+          path: ./
+
+      - name: Merge coverage data
+        run: |
+          mv coverage.dat coverage-unit.dat || true
+          find . -name "coverage.dat" -not -path "./coverage-unit.dat" -exec mv {} coverage-integration.dat \; || true
+          verilator_coverage --write merged-coverage.dat \
+            coverage-unit.dat coverage-integration.dat || true
+
+      - name: Generate merged annotated source
+        run: |
+          verilator_coverage --annotate coverage-annotated-merged \
+            --annotate-all \
+            merged-coverage.dat || true
+
+      - name: Generate merged LCOV
+        run: |
+          verilator_coverage --write-info merged-coverage.info \
+            merged-coverage.dat || true
+
+      - name: Generate coverage summary
+        run: |
+          verilator_coverage --rank merged-coverage.dat | tee coverage-summary.txt || true
+
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          if [ -f merged-coverage.dat ]; then
+            TOTAL_COVERAGE=$(verilator_coverage --rank merged-coverage.dat | grep -oP 'Total.*\(\d+/\d+\)\s+\K\d+\.\d+' | head -1 || echo "0")
+            echo "percentage=${TOTAL_COVERAGE}" >> $GITHUB_OUTPUT
+            echo "Coverage: ${TOTAL_COVERAGE}%"
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate merged coverage summary
+        if: always()
+        run: |
+          echo "## 🎯 Merged Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f merged-coverage.dat ]; then
+            echo "**Total Coverage: ${{ steps.coverage.outputs.percentage }}%**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Coverage by File" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            verilator_coverage --rank merged-coverage.dat 2>/dev/null >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload merged coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-merged
+          path: |
+            merged-coverage.dat
+            merged-coverage.info
+            coverage-annotated-merged/
+            coverage-summary.txt
+          retention-days: 90
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const summary = fs.readFileSync('coverage-summary.txt', 'utf8');
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## HDL Coverage Summary\n```\n' + summary + '\n```'
+              });
+            } catch (error) {
+              console.log('Could not post coverage summary:', error);
+            }

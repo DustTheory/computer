@@ -1,5 +1,3 @@
-.github/
-
 gpu/
 **/*/__pycache__/
 tests/test_env/
