@@ -1,6 +1,7 @@
 # RISC-V FPGA Computer
 
-[![Tests](https://github.com/DustTheory/computer/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/DustTheory/computer/actions/workflows/test-coverage.yml)
+[![Unit Test Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/DustTheory/unit-test-coverage.json)](https://github.com/DustTheory/computer/actions/workflows/test-coverage.yml)
+[![Integration Test Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/DustTheory/integration-test-coverage.json)](https://github.com/DustTheory/computer/actions/workflows/test-coverage.yml)
 
 Building a computer system from scratch on an FPGA, for fun. Features a custom RISC-V RV32I soft-core CPU, VGA video output, and game peripherals.
 
