@@ -16,6 +16,7 @@ connect_debug_port u_ila_0/probe3 [get_nets [list {computer_i/proc_sys_reset_0/p
 
 
 
+
 create_debug_core u_ila_0 ila
 set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_0]
 set_property ALL_PROBE_SAME_MU_CNT 1 [get_debug_cores u_ila_0]
@@ -45,11 +46,11 @@ connect_debug_port u_ila_0/probe3 [get_nets [list computer_i/mig_7series_0/init_
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe4]
 set_property port_width 1 [get_debug_ports u_ila_0/probe4]
-connect_debug_port u_ila_0/probe4 [get_nets [list computer_i/mig_7series_0/sys_rst]]
+connect_debug_port u_ila_0/probe4 [get_nets [list computer_i/clk_wiz_0/inst/locked]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe5]
 set_property port_width 1 [get_debug_ports u_ila_0/probe5]
-connect_debug_port u_ila_0/probe5 [get_nets [list computer_i/clk_wiz_0/inst/locked]]
+connect_debug_port u_ila_0/probe5 [get_nets [list computer_i/mig_7series_0/sys_rst]]
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]

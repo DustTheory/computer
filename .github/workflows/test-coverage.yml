@@ -155,12 +155,24 @@ jobs:
           name: coverage-data-integration
           path: ./
 
+      - name: Extract coverage data
+        run: |
+          mkdir -p extracted-coverage
+          unzip -o '*.zip' -d extracted-coverage
+          mv extracted-coverage/coverage.dat coverage-integration.dat || true
+
       - name: Merge coverage data
         run: |
           mv coverage.dat coverage-unit.dat || true
-          find . -name "coverage.dat" -not -path "./coverage-unit.dat" -exec mv {} coverage-integration.dat \; || true
-          verilator_coverage --write merged-coverage.dat \
-            coverage-unit.dat coverage-integration.dat || true
+          if [ -f coverage-unit.dat ] && [ -f coverage-integration.dat ]; then
+            verilator_coverage --write merged-coverage.dat \
+              coverage-unit.dat coverage-integration.dat || true
+          else
+            echo "One or more coverage files are missing."
+          fi
+
+      - name: Debug Coverage Files
+        run: ls -lR
 
       - name: Generate merged annotated source
         run: |
