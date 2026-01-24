@@ -1,6 +1,6 @@
 import cocotb
 from cpu.utils import uart_send_byte, uart_wait_for_byte
-from cpu.constants import DEBUG_OP_READ_REGISTER
+from cpu.constants import DEBUG_OP_READ_REGISTER, DEBUG_OP_WRITE_REGISTER
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 

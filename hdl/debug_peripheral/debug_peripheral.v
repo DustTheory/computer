@@ -95,6 +95,7 @@ module debug_peripheral (
       o_Reset_Cpu <= 0;
       r_Exec_Counter <= 0;
       output_buffer_head <= 0;
+      output_buffer_tail <= 0;
       input_buffer_head <= 0;
       o_Write_PC_Enable <= 0;
       o_Write_PC_Data <= 0;
@@ -193,7 +194,7 @@ module debug_peripheral (
                   output_buffer_head <= output_buffer_head + 4;
                   o_Reg_Read_Enable <= 0;
                   r_State <= s_IDLE;
-                end;  
+                end;
               end
             end
             op_WRITE_REGISTER: begin
