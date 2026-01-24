@@ -1,5 +1,7 @@
 # RISC-V FPGA Computer
 
+[![Tests](https://github.com/DustTheory/computer/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/DustTheory/computer/actions/workflows/test-coverage.yml)
+
 Building a computer system from scratch on an FPGA, for fun. Features a custom RISC-V RV32I soft-core CPU, VGA video output, and game peripherals.
 
 ## What's This?
@@ -14,12 +16,13 @@ This is a learning project to understand computer architecture from the ground u
 
 ## Current Status
 
-**Working on**: DDR3 memory controller initialization
+**Working on**: Booting CPU from DDR3
 
-- CPU core: Implemented and passing tests
-- Testing: 14 unit tests + 40+ integration tests passing
-- Video: VGA module done, framebuffer designed
-- Memory: Blocked on MIG (Memory Interface Generator) integration
+- CPU core: RV32I implemented and passing tests
+- Memory: DDR3 operational @ 81.25 MHz
+- Testing: 57 unit tests + 50+ integration tests passing
+- Video: VGA module done, framebuffer designed (not yet DDR3-backed)
+- Debug: UART debug peripheral working (`tools/debugger/`)
 
 ## Development Approach
 
@@ -34,7 +37,7 @@ While auxiliary tools like the debugger are coded with AI assistance, the CPU it
 
 **Testing:** Good test coverage prevents regression. Manual testing on FPGA takes too long, so automated tests are a necessity. Tests are written in Python using cocotb and simulated with Verilator. Unit tests verify individual modules, integration tests verify full instruction execution.
 
-**Debug Tools:** A UART-based debugger (`tools/debugger/`) allows real-time inspection of the CPU on FPGA - halt/resume, read/write registers and memory, step through instructions. See [docs/ai/debug-protocol.md](docs/ai/debug-protocol.md).
+**Debug Tools:** A UART-based debugger (`tools/debugger/`) allows real-time inspection of the CPU on FPGA - halt/resume, read/write registers and memory, step through instructions.
 
 ## Repository Contents
 
@@ -50,15 +53,14 @@ Test dependencies: Verilator, Python 3, cocotb
 
 ```bash
 cd tests
-make              # Run all tests
-make cpu          # CPU tests only
-make clean        # Clean build artifacts
+source test_env/bin/activate
+make TEST_TYPE=unit         # Run unit tests
+make TEST_TYPE=integration  # Run integration tests
+make TEST_TYPE=all          # Run all tests
 ```
 
 ## Documentation
 
-- [docs/everyone/](docs/everyone/) - Setup guides and getting started
-- [docs/ai/](docs/ai/) - Detailed architecture and protocol specs
-- [CLAUDE.md](CLAUDE.md) - Project context and AI instructions
-
-See [docs/everyone/architecture.md](docs/everyone/architecture.md) for CPU details, memory map, and video system design.
+- [docs/getting-started.md](docs/getting-started.md) - Setup and getting started
+- [docs/architecture.md](docs/architecture.md) - CPU details, memory map, and system design
+- [CLAUDE.md](CLAUDE.md) - Project context for AI assistants

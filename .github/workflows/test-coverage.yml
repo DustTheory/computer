@@ -57,6 +57,7 @@ jobs:
           name: test-results-${{ matrix.test-type }}
           path: tests/results.xml
           retention-days: 30
+          if-no-files-found: ignore
 
       - name: Generate test summary for job
         if: always()
@@ -80,6 +81,7 @@ jobs:
           name: coverage-data-${{ matrix.test-type }}
           path: tests/coverage.dat
           retention-days: 90
+          if-no-files-found: ignore
 
       - name: Generate annotated source coverage
         if: always()
@@ -113,6 +115,7 @@ jobs:
           name: coverage-annotated-${{ matrix.test-type }}
           path: coverage-annotated-${{ matrix.test-type }}
           retention-days: 90
+          if-no-files-found: ignore
 
       - name: Upload LCOV coverage
         if: always()
@@ -121,6 +124,7 @@ jobs:
           name: coverage-lcov-${{ matrix.test-type }}
           path: coverage-${{ matrix.test-type }}.info
           retention-days: 90
+          if-no-files-found: ignore
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -144,23 +148,39 @@ jobs:
         uses: YosysHQ/setup-oss-cad-suite@v3
 
       - name: Download unit coverage
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: coverage-data-unit
-          path: ./
+          path: ./unit
 
       - name: Download integration coverage
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: coverage-data-integration
-          path: ./
+          path: ./integration
 
       - name: Merge coverage data
         run: |
-          mv coverage.dat coverage-unit.dat || true
-          find . -name "coverage.dat" -not -path "./coverage-unit.dat" -exec mv {} coverage-integration.dat \; || true
-          verilator_coverage --write merged-coverage.dat \
-            coverage-unit.dat coverage-integration.dat || true
+          # Collect available coverage files
+          FILES=""
+          if [ -f unit/coverage.dat ]; then
+            FILES="$FILES unit/coverage.dat"
+            echo "Found unit coverage"
+          fi
+          if [ -f integration/coverage.dat ]; then
+            FILES="$FILES integration/coverage.dat"
+            echo "Found integration coverage"
+          fi
+
+          # Merge if we have any files
+          if [ -n "$FILES" ]; then
+            verilator_coverage --write merged-coverage.dat $FILES
+            echo "Merged coverage from:$FILES"
+          else
+            echo "No coverage files found"
+          fi
 
       - name: Generate merged annotated source
         run: |
