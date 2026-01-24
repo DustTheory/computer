@@ -140,6 +140,9 @@ jobs:
     if: always()
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup OSS CAD Suite
         uses: YosysHQ/setup-oss-cad-suite@v3
 
