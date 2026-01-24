@@ -122,6 +122,28 @@ jobs:
           path: coverage-${{ matrix.test-type }}.info
           retention-days: 90
 
+      - name: Generate Shields.io JSON for coverage
+        if: always()
+        run: |
+          cd tests
+          COVERAGE=$(verilator_coverage --rank coverage.dat | grep -oP 'Total.*\(\d+/\d+\)\s+\K\d+\.\d+' | head -1 || echo "0")
+          cat > ../${{ matrix.test-type }}-test-coverage.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "${{ matrix.test-type }} coverage",
+            "message": "${COVERAGE}%",
+            "color": "blue"
+          }
+          EOF
+
+      - name: Upload Shields.io JSON for coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.test-type }}-test-coverage-json
+          path: ${{ matrix.test-type }}-test-coverage.json
+          retention-days: 7
+
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
