@@ -72,7 +72,11 @@ jobs:
             echo "Test output not found" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
+          # Extract and print coverage percentage
+          COVERAGE=$(verilator_coverage --rank coverage.dat | grep -oP 'Total.*\(\d+/\d+\)\s+\K\d+\.\d+' | head -1 || echo "0")
           echo "### ${{ matrix.test-type }} Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Coverage: ${COVERAGE}%**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           verilator_coverage --rank coverage.dat 2>/dev/null | head -10 >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
