@@ -15,9 +15,9 @@ module debug_peripheral (
     output reg o_Halt_Cpu,
     output reg o_Reset_Cpu,
 
-    output o_Reg_Write_Enable,
-    output [4:0] o_Reg_Write_Addr,
-    output [31:0] o_Reg_Write_Data,
+    output reg o_Reg_Write_Enable,
+    output reg [4:0] o_Reg_Write_Addr,
+    output reg [31:0] o_Reg_Write_Data,
 
     output reg o_Reg_Read_Enable,
     output reg [4:0] o_Reg_Read_Addr,
@@ -95,7 +95,7 @@ module debug_peripheral (
       o_Reset_Cpu <= 0;
       r_Exec_Counter <= 0;
       output_buffer_head <= 0;
-      output_buffer_tail <= 0;
+      // Note: output_buffer_tail is managed by the UART transmitter block
       input_buffer_head <= 0;
       o_Write_PC_Enable <= 0;
       o_Write_PC_Data <= 0;
@@ -161,13 +161,15 @@ module debug_peripheral (
             end
             op_WRITE_PC: begin
               o_Halt_Cpu <= 1;
-              if(w_Rx_DV) begin
+              if (w_Rx_DV) begin
                 input_buffer[input_buffer_head] <= w_Rx_Byte;
                 input_buffer_head <= input_buffer_head + 1;
               end
               if (i_Pipeline_Flushed && input_buffer_head == 4) begin
                 o_Write_PC_Enable <= 1;
-                o_Write_PC_Data <= {input_buffer[3], input_buffer[2], input_buffer[1], input_buffer[0]};
+                o_Write_PC_Data <= {
+                  input_buffer[3], input_buffer[2], input_buffer[1], input_buffer[0]
+                };
                 input_buffer_head <= input_buffer_head + 1;
               end
               if (i_Pipeline_Flushed && input_buffer_head == 5) begin
@@ -177,36 +179,39 @@ module debug_peripheral (
             end
             op_READ_REGISTER: begin
               o_Halt_Cpu <= 1;
-              if(w_Rx_DV) begin
+              if (w_Rx_DV) begin
                 input_buffer[input_buffer_head] <= w_Rx_Byte;
                 input_buffer_head <= input_buffer_head + 1;
               end
               if (i_Pipeline_Flushed && input_buffer_head > 0) begin
                 // Read register
                 o_Reg_Read_Enable <= 1;
-                o_Reg_Read_Addr <= input_buffer[0][4:0];
-                if(o_Reg_Read_Enable) begin
+                o_Reg_Read_Addr   <= input_buffer[0][4:0];
+                if (o_Reg_Read_Enable) begin
                   // Already got reg data, write it to the output
                   output_buffer[output_buffer_head] <= i_Reg_Read_Data[7:0];
-                  output_buffer[output_buffer_head + 1] <= i_Reg_Read_Data[15:8];
-                  output_buffer[output_buffer_head + 2] <= i_Reg_Read_Data[23:16];
-                  output_buffer[output_buffer_head + 3] <= i_Reg_Read_Data[31:24];
+                  output_buffer[output_buffer_head+1] <= i_Reg_Read_Data[15:8];
+                  output_buffer[output_buffer_head+2] <= i_Reg_Read_Data[23:16];
+                  output_buffer[output_buffer_head+3] <= i_Reg_Read_Data[31:24];
                   output_buffer_head <= output_buffer_head + 4;
                   o_Reg_Read_Enable <= 0;
                   r_State <= s_IDLE;
-                end;
+                end
+                ;
               end
             end
             op_WRITE_REGISTER: begin
               o_Halt_Cpu <= 1;
-              if(w_Rx_DV) begin
+              if (w_Rx_DV) begin
                 input_buffer[input_buffer_head] <= w_Rx_Byte;
                 input_buffer_head <= input_buffer_head + 1;
               end
               if (i_Pipeline_Flushed && input_buffer_head == 5) begin
                 o_Reg_Write_Enable <= 1;
                 o_Reg_Write_Addr <= input_buffer[0][4:0];
-                o_Reg_Write_Data <= {input_buffer[4], input_buffer[3], input_buffer[2], input_buffer[1]};
+                o_Reg_Write_Data <= {
+                  input_buffer[4], input_buffer[3], input_buffer[2], input_buffer[1]
+                };
                 input_buffer_head <= input_buffer_head + 1;
               end
               if (i_Pipeline_Flushed && input_buffer_head == 6) begin
