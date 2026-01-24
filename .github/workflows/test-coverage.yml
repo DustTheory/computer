@@ -155,11 +155,8 @@ jobs:
           name: coverage-data-integration
           path: ./
 
-      - name: Extract coverage data
-        run: |
-          mkdir -p extracted-coverage
-          unzip -o '*.zip' -d extracted-coverage
-          mv extracted-coverage/coverage.dat coverage-integration.dat || true
+      - name: List files before merging coverage data
+        run: ls -lR
 
       - name: Merge coverage data
         run: |
