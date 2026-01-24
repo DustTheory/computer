@@ -149,11 +149,17 @@ jobs:
           name: coverage-data-unit
           path: ./
 
+      - name: Rename unit coverage file
+        run: mv coverage.dat coverage-unit.dat
+
       - name: Download integration coverage
         uses: actions/download-artifact@v4
         with:
           name: coverage-data-integration
           path: ./
+
+      - name: Rename integration coverage file
+        run: mv coverage.dat coverage-integration.dat
 
       - name: List files before merging coverage data
         run: ls -lR
