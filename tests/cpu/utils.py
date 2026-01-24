@@ -116,7 +116,7 @@ async def uart_send_bytes(clock, i_rx_serial, o_rx_dv, byte_array):
 
 async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
     """Wait for a byte to be transmitted over UART TX line bit by bit."""
-    
+
     # Wait for start bit for max 1 second
     timeout_cycles = CLOCK_FREQUENCY  # 1 second timeout
     cycles_waited = 0
@@ -124,7 +124,7 @@ async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
         await ClockCycles(clock, 1)
         cycles_waited += 1
         assert cycles_waited < timeout_cycles, "Timeout waiting for UART start bit."
-    
+
     # Wait UART_CLOCKS_PER_BIT/2 to sample in middle of start bit
     await ClockCycles(clock, int(UART_CLOCKS_PER_BIT) // 2)
     assert i_tx_serial.value.integer == 0, "UART start bit incorrect."
@@ -146,5 +146,22 @@ async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
     assert o_tx_done == 1, "UART o_Tx_Done flag not set"
 
     return received_byte
-        
+
+async def wait_for_pipeline_flush(dut, timeout_cycles=1000):
+    """
+    Wait for CPU pipeline to flush (becomes empty).
+    Required after HALT command before setting up CPU state.
+
+    Args:
+        dut: The test harness DUT
+        timeout_cycles: Maximum cycles to wait
+
+    Raises:
+        AssertionError: If pipeline doesn't flush within timeout
+    """
+    for i in range(timeout_cycles):
+        if dut.cpu.w_Pipeline_Flushed.value == 1:
+            return
+        await ClockCycles(dut.i_Clock, 1)
+    raise AssertionError(f"Pipeline did not flush after {timeout_cycles} cycles")
 

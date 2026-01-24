@@ -10,7 +10,9 @@ module control_unit (
     input [OP_CODE_WIDTH:0] i_Op_Code,
     input [FUNC3_WIDTH:0] i_Funct3,
     input i_Funct7_Bit_5,
+    /* verilator lint_off UNOPTFLAT */
     input i_Branch_Enable,
+    /* verilator lint_on UNOPTFLAT */
     output reg o_Port_A_Select,
     output reg o_Port_B_Select,
     output reg [REG_ADDR_WIDTH-1:0] o_Reg_Write_Select,
@@ -20,7 +22,8 @@ module control_unit (
     output reg [LS_SEL_WIDTH:0] o_Load_Store_Type,
     output reg o_Pc_Alu_Mux_Select,
     output reg o_Reg_Write_Enable,
-    output reg o_Mem_Write_Enable
+    output reg o_Mem_Write_Enable,
+    output reg o_Flush_Pipeline
 );
 
   always @* begin
@@ -33,6 +36,7 @@ module control_unit (
           o_Pc_Alu_Mux_Select = 1'b0;
           o_Imm_Select = IMM_UNKNOWN_TYPE;
           o_Load_Store_Type = LS_TYPE_NONE;
+          o_Flush_Pipeline = 1'b0;
           case (i_Funct3)
             FUNC3_ALU_ADD_SUB: begin
               o_Alu_Select = (i_Funct7_Bit_5) ? ALU_SEL_SUB : ALU_SEL_ADD;
@@ -101,6 +105,7 @@ module control_unit (
           o_Imm_Select = IMM_U_TYPE;
           o_Reg_Write_Select = REG_WRITE_IMM;
           o_Load_Store_Type = LS_TYPE_NONE;
+          o_Flush_Pipeline = 1'b0;
         end
         OP_U_TYPE_AUIPC: begin
           o_Port_A_Select = 1'b0;
@@ -113,6 +118,7 @@ module control_unit (
           o_Imm_Select = IMM_U_TYPE;
           o_Reg_Write_Select = REG_WRITE_ALU;
           o_Load_Store_Type = LS_TYPE_NONE;
+          o_Flush_Pipeline = 1'b0;
         end
         OP_J_TYPE: begin
           o_Port_A_Select = 1'b0;
@@ -125,6 +131,7 @@ module control_unit (
           o_Imm_Select = IMM_J_TYPE;
           o_Reg_Write_Select = REG_WRITE_PC_NEXT;
           o_Load_Store_Type = LS_TYPE_NONE;
+          o_Flush_Pipeline = 1'b1;
         end
         OP_I_TYPE_ALU: begin
           o_Port_A_Select = 1'b1;
@@ -134,6 +141,7 @@ module control_unit (
           o_Pc_Alu_Mux_Select = 1'b0;
           o_Imm_Select = IMM_I_TYPE;
           o_Load_Store_Type = LS_TYPE_NONE;
+          o_Flush_Pipeline = 1'b0;
           case (i_Funct3)
             FUNC3_ALU_ADD_SUB: begin
               o_Alu_Select = (i_Funct7_Bit_5) ? ALU_SEL_SUB : ALU_SEL_ADD;
@@ -195,6 +203,7 @@ module control_unit (
           o_Imm_Select = IMM_I_TYPE;
           o_Reg_Write_Select = REG_WRITE_PC_NEXT;
           o_Load_Store_Type = LS_TYPE_NONE;
+          o_Flush_Pipeline = 1'b1;
         end
         OP_I_TYPE_LOAD: begin
           o_Port_A_Select = 1'b1;
@@ -214,6 +223,7 @@ module control_unit (
             FUNC3_LS_HU: o_Load_Store_Type = LS_TYPE_LOAD_HALF_UNSIGNED;
             default: o_Load_Store_Type = LS_TYPE_NONE;
           endcase
+          o_Flush_Pipeline = 1'b0;
         end
         OP_S_TYPE: begin
           o_Port_A_Select = 1'b1;
@@ -231,6 +241,7 @@ module control_unit (
             FUNC3_LS_W: o_Load_Store_Type = LS_TYPE_STORE_WORD;
             default: o_Load_Store_Type = LS_TYPE_NONE;
           endcase
+          o_Flush_Pipeline = 1'b0;
         end
         OP_B_TYPE: begin
           o_Port_A_Select = 1'b0;
@@ -251,6 +262,7 @@ module control_unit (
             FUNC3_BRANCH_BGEU: o_Cmp_Select = CMP_SEL_GEU;
             default: o_Cmp_Select = CMP_SEL_UNKNOWN;
           endcase
+          o_Flush_Pipeline = i_Branch_Enable;
         end
         default: begin
           o_Port_A_Select = 1'b0;
@@ -263,6 +275,7 @@ module control_unit (
           o_Imm_Select = IMM_UNKNOWN_TYPE;
           o_Load_Store_Type = LS_TYPE_NONE;
           o_Reg_Write_Select = REG_WRITE_NONE;
+          o_Flush_Pipeline = 1'b0;
         end
       endcase
     end else begin
@@ -276,6 +289,7 @@ module control_unit (
       o_Imm_Select = IMM_UNKNOWN_TYPE;
       o_Load_Store_Type = LS_TYPE_NONE;
       o_Reg_Write_Select = REG_WRITE_NONE;
+      o_Flush_Pipeline = 1'b0;
     end
   end
 

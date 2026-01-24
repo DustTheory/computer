@@ -47,12 +47,26 @@ module cpu (
     output s_instruction_memory_axil_bready
 );
 
+  // Debug peripheral wires
+  wire w_Debug_Reg_Read_Enable;
+  wire [4:0] w_Debug_Reg_Read_Addr;
+  wire w_Debug_Reg_Write_Enable;
+  wire [4:0] w_Debug_Reg_Write_Addr;
+  wire [31:0] w_Debug_Reg_Write_Data;
+  wire w_Debug_Write_PC_Enable;
+  wire [31:0] w_Debug_Write_PC_Data;
+  wire w_Debug_Reset;
+  wire w_Debug_Stall;
+
   wire w_Instruction_Valid;
 
   reg [XLEN-1:0] r_PC;  // Program Counter
   wire [XLEN-1:0] w_Instruction;
   wire [XLEN-1:0] w_Immediate;
   wire [XLEN-1:0] w_PC_Next = r_PC + 4;
+
+  wire w_Flush_Pipeline; // Flag to flush pipeline on branches
+  reg r_Flushing_Pipeline; // Indicates that the pipeline is currently being flushed
 
   // Outputs of the register file - Values at Rs1 and Rs2
   wire [XLEN-1:0] w_Reg_Source_1;
@@ -84,7 +98,7 @@ module cpu (
   wire w_Reg_Write_Enable;  // Enables writing to the register file
   wire w_Mem_Write_Enable;  // Enables writing to memory (not used in this example)
 
-  wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Instruction[19:15];
+  wire [REG_ADDR_WIDTH-1:0] w_Rs_1 = w_Debug_Reg_Read_Enable ? w_Debug_Reg_Read_Addr : w_Instruction[19:15];
   wire [REG_ADDR_WIDTH-1:0] w_Rs_2 = w_Instruction[24:20];
 
   // Stage2 (Memory/Wait) pipeline registers
@@ -141,13 +155,13 @@ module cpu (
 
   register_file reg_file (
       .i_Reset(w_Reset),
-      .i_Enable(w_Instruction_Valid || w_Wb_Enable),
+      .i_Enable(w_Instruction_Valid || w_Wb_Enable || w_Debug_Reg_Write_Enable || w_Debug_Reg_Read_Enable),
       .i_Clock(i_Clock),
       .i_Read_Addr_1(w_Rs_1),
       .i_Read_Addr_2(w_Rs_2),
-      .i_Write_Addr(r_S3_Rd),
-      .i_Write_Data(w_Wb_Data),
-      .i_Write_Enable(w_Wb_Enable),
+      .i_Write_Addr(w_Debug_Reg_Write_Enable ? w_Debug_Reg_Write_Addr : r_S3_Rd),
+      .i_Write_Data(w_Debug_Reg_Write_Enable ? w_Debug_Reg_Write_Data : w_Wb_Data),
+      .i_Write_Enable(w_Debug_Reg_Write_Enable || w_Wb_Enable),
       .o_Read_Data_1(w_Reg_Source_1),
       .o_Read_Data_2(w_Reg_Source_2)
   );
@@ -167,7 +181,8 @@ module cpu (
       .o_Pc_Alu_Mux_Select(w_Pc_Alu_Mux_Select),
       .o_Reg_Write_Enable(w_Reg_Write_Enable),
       .o_Mem_Write_Enable(w_Mem_Write_Enable),
-      .o_Load_Store_Type(w_Load_Store_Type)
+      .o_Load_Store_Type(w_Load_Store_Type),
+      .o_Flush_Pipeline(w_Flush_Pipeline)
   );
 
   immediate_unit imm_unit (
@@ -180,7 +195,7 @@ module cpu (
   instruction_memory_axi instruction_memory (
       .i_Reset(w_Reset),
       .i_Clock(i_Clock),
-      .i_Enable(i_Init_Calib_Complete),
+      .i_Enable_Fetch(w_Enable_Instruction_Fetch),
       .i_Instruction_Addr(r_PC),
       .o_Instruction(w_Instruction),
       .o_Instruction_Valid(w_Instruction_Valid),
@@ -238,12 +253,11 @@ module cpu (
   wire w_Mem_Write_Done = (w_Memory_State == WRITE_SUCCESS);
   wire w_Mem_Busy = (w_Memory_State != IDLE);
 
-  wire w_Debug_Stall;
-  wire w_Debug_Reset;
-
   wire w_Reset = i_Reset || w_Debug_Reset;
 
-  wire w_Stall_S1 = w_Debug_Stall || !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
+  wire w_Enable_Instruction_Fetch = i_Init_Calib_Complete && !w_Debug_Stall && !r_Flushing_Pipeline;
+  wire w_Stall_S1 = !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
+  wire w_Pipeline_Flushed = !w_Instruction_Valid && !r_S2_Valid && !r_S3_Valid;
 
   // Memory interface driven from S2
   memory_axi mem (
@@ -283,9 +297,18 @@ module cpu (
       r_S3_Load_Store_Type <= LS_TYPE_NONE;
       r_S2_Rd_Write_Enable <= 1'b0;
       r_S3_Rd_Write_Enable <= 1'b0;
+      r_Flushing_Pipeline <= 1'b0;
     end else begin
       // Capture load data when ready
       if (w_Mem_Read_Done && w_S2_Is_Load) r_S2_Load_Data <= w_Dmem_Data;
+
+      if(w_Pipeline_Flushed) begin
+        if(r_Flushing_Pipeline)
+          r_Flushing_Pipeline <= 1'b0;
+      end else begin
+        if(w_Flush_Pipeline && !w_Pipeline_Flushed)
+          r_Flushing_Pipeline <= 1'b1;
+      end
 
       if (!w_Stall_S1) begin
         // S2 -> S3
@@ -338,7 +361,9 @@ module cpu (
 
   always @(posedge i_Clock) begin
     if (!w_Reset) begin
-      if (!w_Stall_S1 && w_Instruction_Valid) begin
+      if(w_Debug_Write_PC_Enable && w_Pipeline_Flushed) begin
+        r_PC <= w_Debug_Write_PC_Data;
+      end else if (!w_Stall_S1 && w_Instruction_Valid && w_Enable_Instruction_Fetch) begin
         r_PC <= w_Pc_Alu_Mux_Select ? w_Alu_Result : w_PC_Next;
       end
     end
@@ -352,11 +377,22 @@ module cpu (
       .i_Uart_Tx_In(i_Uart_Tx_In),
 
       .i_PC(r_PC),
-      .i_Instruction(w_Instruction),
+      .i_Pipeline_Flushed(w_Pipeline_Flushed),
 
       .o_Uart_Rx_Out(o_Uart_Rx_Out),
       .o_Halt_Cpu(w_Debug_Stall),
-      .o_Reset_Cpu(w_Debug_Reset)
+      .o_Reset_Cpu(w_Debug_Reset),
+
+      .o_Reg_Read_Enable(w_Debug_Reg_Read_Enable),
+      .o_Reg_Read_Addr(w_Debug_Reg_Read_Addr),
+      .i_Reg_Read_Data(w_Reg_Source_1),
+
+      .o_Reg_Write_Enable(w_Debug_Reg_Write_Enable),
+      .o_Reg_Write_Addr(w_Debug_Reg_Write_Addr),
+      .o_Reg_Write_Data(w_Debug_Reg_Write_Data),
+
+      .o_Write_PC_Enable(w_Debug_Write_PC_Enable),
+      .o_Write_PC_Data(w_Debug_Write_PC_Data)
   );
 
 endmodule
