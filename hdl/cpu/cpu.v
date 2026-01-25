@@ -360,7 +360,9 @@ module cpu (
   wire w_Retire = w_Retire_Reg || w_Store_Commit;
 
   always @(posedge i_Clock) begin
-    if (!w_Reset) begin
+    if (w_Reset) begin
+      r_PC <= CPU_BASE_ADDR;
+    end else begin
       if(w_Debug_Write_PC_Enable && w_Pipeline_Flushed) begin
         r_PC <= w_Debug_Write_PC_Data;
       end else if (!w_Stall_S1 && w_Instruction_Valid && w_Enable_Instruction_Fetch) begin

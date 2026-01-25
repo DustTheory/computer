@@ -2,8 +2,8 @@ import cocotb
 from cocotb.triggers import ClockCycles
 from cocotb.clock import Clock
 
-from cpu.utils import gen_r_type_instruction, write_word_to_mem
-from cpu.constants import FUNC3_ALU_SLT, PIPELINE_CYCLES, ROM_BOUNDARY_ADDR
+from cpu.utils import gen_r_type_instruction, send_unhalt_command, send_write_pc_command, write_word_to_mem, wait_for_pipeline_flush
+from cpu.constants import FUNC3_ALU_SLT, PIPELINE_CYCLES, RAM_START_ADDR
 
 wait_ns = 1
 
@@ -20,7 +20,7 @@ async def test_slt_instruction(dut):
         (-1, -2, 0),
     ]
 
-    start_address =  ROM_BOUNDARY_ADDR + 0x0
+    start_address =  RAM_START_ADDR + 0x0
     rs1 = 1
     rs2 = 2
     rd = 3
@@ -37,12 +37,14 @@ async def test_slt_instruction(dut):
         dut.i_Reset.value = 0
         await ClockCycles(dut.i_Clock, 1)
 
+        await send_write_pc_command(dut, start_address)
+        await wait_for_pipeline_flush(dut)
         write_word_to_mem(dut.instruction_ram.mem, start_address, slt_instruction)
-        dut.cpu.r_PC.value = start_address
         dut.cpu.reg_file.Registers[rs1].value = rs1_value & 0xFFFFFFFF
         dut.cpu.reg_file.Registers[rs2].value = rs2_value & 0xFFFFFFFF
+        await send_unhalt_command(dut)
 
-        await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
+        await ClockCycles(dut.i_Clock, PIPELINE_CYCLES + 3)
 
         actual = dut.cpu.reg_file.Registers[rd].value.signed_integer
         assert actual == expected_result, (

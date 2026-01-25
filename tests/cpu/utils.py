@@ -4,9 +4,12 @@ from cpu.constants import (
     OP_S_TYPE,
     OP_R_TYPE,
 
+    CPU_BASE_ADDR,
     ROM_BOUNDARY_ADDR,
-    
+
     UART_CLOCKS_PER_BIT,
+    DEBUG_OP_WRITE_PC,
+    DEBUG_OP_UNHALT,
 )
 from cocotb.triggers import ClockCycles, FallingEdge
 
@@ -62,31 +65,42 @@ def gen_r_type_instruction(rd, funct3, rs1, rs2, funct7):
     return instruction
 
 def write_word_to_mem(mem_array, addr, value):
-    """Write a 32-bit value into byte-addressable cocotb memory (little-endian)."""
+    """Write a 32-bit value into byte-addressable cocotb memory (little-endian).
+
+    Address is masked to 16 bits to match test harness AXI truncation.
+    """
+    addr = (addr - 0x80000000) & 0xFFFF
     mem_array[addr + 0].value = (value >> 0) & 0xFF
     mem_array[addr + 1].value = (value >> 8) & 0xFF
     mem_array[addr + 2].value = (value >> 16) & 0xFF
     mem_array[addr + 3].value = (value >> 24) & 0xFF
 
 def write_half_to_mem(mem_array, addr, value):
+    """Write a 16-bit value into byte-addressable cocotb memory (little-endian)."""
+    addr = (addr - 0x80000000) & 0xFFFF
     mem_array[addr + 0].value = (value >> 0) & 0xFF
     mem_array[addr + 1].value = (value >> 8) & 0xFF
 
 def write_byte_to_mem(mem_array, addr, value):
+    """Write an 8-bit value into byte-addressable cocotb memory."""
+    addr = (addr - 0x80000000) & 0xFFFF
     mem_array[addr].value = value & 0xFF
 
 def write_instructions(mem_array, base_addr, instructions):
     """Write a list of 32-bit instructions at word stride (4 bytes)."""
-    if base_addr < ROM_BOUNDARY_ADDR:
-        raise ValueError(f"Base address {base_addr:#06x} is inside of ROM boundary.")
+    if base_addr <= ROM_BOUNDARY_ADDR:
+        raise ValueError(f"Base address {base_addr:#010x} is inside ROM boundary (must be > {ROM_BOUNDARY_ADDR:#010x}).")
     for i, ins in enumerate(instructions):
         write_word_to_mem(mem_array, base_addr + 4*i, ins)
 
 def write_instructions_rom(mem_array, base_addr, instructions):
+    """Write instructions to ROM (word-addressable, not byte-addressable)."""
     if base_addr > ROM_BOUNDARY_ADDR:
-        raise ValueError(f"Base address {base_addr:#06x} is outside of ROM boundary.")
+        raise ValueError(f"Base address {base_addr:#010x} is outside ROM boundary (must be <= {ROM_BOUNDARY_ADDR:#010x}).")
+    # ROM uses word addressing, offset from CPU_BASE_ADDR
+    rom_offset = (base_addr - CPU_BASE_ADDR) // 4
     for i, ins in enumerate(instructions):
-        mem_array[base_addr//4 + i].value = ins
+        mem_array[rom_offset + i].value = ins
 
 
 async def uart_send_byte(clock, i_rx_serial, o_rx_dv, data_byte):
@@ -164,4 +178,21 @@ async def wait_for_pipeline_flush(dut, timeout_cycles=1000):
             return
         await ClockCycles(dut.i_Clock, 1)
     raise AssertionError(f"Pipeline did not flush after {timeout_cycles} cycles")
+
+
+async def send_write_pc_command(dut, pc_value):
+    """Send WRITE_PC command via debug peripheral: opcode + 4 PC bytes (little-endian).
+
+    Note: The WRITE_PC command automatically halts the CPU.
+    """
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_WRITE_PC)
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, (pc_value >> 0) & 0xFF)
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, (pc_value >> 8) & 0xFF)
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, (pc_value >> 16) & 0xFF)
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, (pc_value >> 24) & 0xFF)
+
+
+async def send_unhalt_command(dut):
+    """Send UNHALT command via debug peripheral to resume CPU execution."""
+    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
 

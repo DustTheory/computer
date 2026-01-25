@@ -4,6 +4,9 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_s_type_instruction,
+    send_unhalt_command,
+    send_write_pc_command,
+    wait_for_pipeline_flush,
     write_word_to_mem,
 )
 from cpu.constants import (
@@ -11,7 +14,7 @@ from cpu.constants import (
 
     PIPELINE_CYCLES,
 
-    ROM_BOUNDARY_ADDR,
+    RAM_START_ADDR,
 )
 
 wait_ns = 1
@@ -19,7 +22,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_sh_instruction(dut):
     """Test sh instruction"""
-    start_address =  ROM_BOUNDARY_ADDR + 0x40
+    start_address =  RAM_START_ADDR + 0x40
     rs1 = 0x4
     rs2 = 0x5
     rs1_value = 0
@@ -39,10 +42,12 @@ async def test_sh_instruction(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
-    dut.cpu.r_PC.value = start_address
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
     write_word_to_mem(dut.instruction_ram.mem, start_address, sh_instruction)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
+    await send_unhalt_command(dut)
 
     await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 

@@ -4,7 +4,7 @@
 module instruction_memory_axi (
     input i_Reset,
     input i_Clock,
-    input i_Enable_Fetch, // Allows new fetch commands to be issued
+    input i_Enable_Fetch,  // Allows new fetch commands to be issued
     input [XLEN-1:0] i_Instruction_Addr,
     output reg [XLEN-1:0] o_Instruction,
     output o_Instruction_Valid,
@@ -28,7 +28,7 @@ module instruction_memory_axi (
     output s_axil_bready
 );
 
-  reg [31:0] rom[0:(ROM_BOUNDARY_ADDR>>2)];  // ROM Instruction Memory
+  reg [31:0] rom[0:(ROM_SIZE>>2)-1];  // ROM Instruction Memory (1024 words = 4KB)
 
   initial begin
     $readmemh("rom.mem", rom);
@@ -78,9 +78,12 @@ module instruction_memory_axi (
   assign o_Instruction_Valid = (r_State == READ_SUCCESS);
   // assign o_Fetch_Busy = (r_State != IDLE);
 
+  // Calculate offset from CPU base address for ROM indexing
+  wire [31:0] w_Rom_Offset = i_Instruction_Addr - CPU_BASE_ADDR;
+
   always @(*) begin
     if (i_Instruction_Addr <= ROM_BOUNDARY_ADDR && i_Enable_Fetch) begin
-      o_Instruction = rom[i_Instruction_Addr[11:2]];
+      o_Instruction = rom[w_Rom_Offset[11:2]];
     end else if (r_State == READ_SUCCESS) begin
       o_Instruction = s_axil_rdata;
     end else begin

@@ -1,13 +1,20 @@
 `timescale 1ns / 1ps
 
 module vga_out #(
-    parameter BITS_PER_PIXEL = 4,
-    parameter FRAMEBUFFER_DEPTH = 640 * 480
+    parameter BITS_PER_COLOR_CHANNEL = 4
 ) (
     input i_Clock,
-    input [BITS_PER_PIXEL-1:0] i_Fb_Read_Data,
-    output [31:0] o_Fb_Read_Addr,
-    output [BITS_PER_PIXEL-1:0] o_RGB,
+
+    // AXI-Stream Interface
+    input  [15:0] s_axis_tdata,
+    input         s_axis_tvalid,
+    output        s_axis_tready,
+
+    output o_mm2s_fsync,
+
+    output [BITS_PER_COLOR_CHANNEL-1:0] o_Red,
+    output [BITS_PER_COLOR_CHANNEL-1:0] o_Green,
+    output [BITS_PER_COLOR_CHANNEL-1:0] o_Blue,
     output o_Horizontal_Sync,
     output o_Vertical_Sync
 );
@@ -72,8 +79,14 @@ module vga_out #(
     end
   end
 
-  assign o_Fb_Read_Addr = (r_V_Counter * VISIBLE_H[15:0]) + {16'd0, r_H_Counter};
-  assign o_RGB = (w_Visible) ? i_Fb_Read_Data : 0;
+
+  assign s_axis_tready = w_Visible;
+  assign o_mm2s_fsync = (r_H_Counter == 0) && (r_V_Counter == 0);
+
+  assign o_Red = (s_axis_tready && s_axis_tvalid) ? s_axis_tdata[15:12] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign o_Green = (s_axis_tready && s_axis_tvalid) ? s_axis_tdata[10:7] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign o_Blue = (s_axis_tready && s_axis_tvalid) ? s_axis_tdata[4:1] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+
   assign o_Horizontal_Sync = ~(r_H_State == STATE_SYNC);  // Invert for active low
   assign o_Vertical_Sync = ~(r_V_State == STATE_SYNC);  // Invert for active low
 

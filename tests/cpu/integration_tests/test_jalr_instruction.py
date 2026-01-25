@@ -4,12 +4,15 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_i_type_instruction,
+    send_unhalt_command,
+    send_write_pc_command,
+    wait_for_pipeline_flush,
+    write_word_to_mem,
 )
 from cpu.constants import (
     OP_I_TYPE_JALR,
-    ROM_BOUNDARY_ADDR,
+    RAM_START_ADDR,
 )
-from cpu.utils import write_word_to_mem
 
 wait_ns = 1
 
@@ -18,7 +21,7 @@ wait_ns = 1
 async def test_jalr_instruction(dut):
     """Test JALR instruction"""
 
-    start_address =  ROM_BOUNDARY_ADDR + 256
+    start_address =  RAM_START_ADDR + 256
     dest_register = 1
     rs1 = 2
     rs1_value = 0x200
@@ -28,6 +31,8 @@ async def test_jalr_instruction(dut):
     expected_pc = rs1_value + i_type_imm
     expected_register_value = start_address + 4
 
+    write_word_to_mem(dut.instruction_ram.mem, start_address, jalr_instruction)
+
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
@@ -36,9 +41,10 @@ async def test_jalr_instruction(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
-    write_word_to_mem(dut.instruction_ram.mem, start_address, jalr_instruction)
-    dut.cpu.r_PC.value = start_address
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    await send_unhalt_command(dut)
 
     max_cycles = 200
     pc_reached = False

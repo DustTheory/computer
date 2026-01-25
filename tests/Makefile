@@ -71,8 +71,11 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_debug_read_pc, \
 		cpu.integration_tests.test_debug_read_register, \
 		cpu.integration_tests.test_debug_write_register, \
-		cpu.integration_tests.test_debug_write_pc"	
+		cpu.integration_tests.test_debug_write_pc"
 
+VGA_UNIT_TESTS_TOPLEVEL = vga_unit_tests_harness
+VGA_UNIT_TESTS_MODULE = "vga.unit_tests.test_vga_timing, \
+		vga.unit_tests.test_vga_data"
 
 TEST_TYPE ?= unit  
 
@@ -83,6 +86,8 @@ all:
 	$(MAKE) TEST_TYPE=unit
 	$(MAKE) clean TEST_TYPE=integration
 	$(MAKE) TEST_TYPE=integration
+	$(MAKE) clean TEST_TYPE=vga
+	$(MAKE) TEST_TYPE=vga
 else
 
 ifeq ($(TEST_TYPE),unit)
@@ -95,6 +100,12 @@ ifeq ($(TEST_TYPE),integration)
   TOPLEVEL = $(CPU_INTEGRATION_TESTS_TOPLEVEL)
   MODULE = $(CPU_INTEGRATION_TESTS_MODULE)
   VERILOG_SOURCES += ./cpu/integration_tests/cpu_integration_tests_harness.v
+endif
+
+ifeq ($(TEST_TYPE),vga)
+  TOPLEVEL = $(VGA_UNIT_TESTS_TOPLEVEL)
+  MODULE = $(VGA_UNIT_TESTS_MODULE)
+  VERILOG_SOURCES += ./vga/unit_tests/vga_unit_tests_harness.v
 endif
 
 export SIM TOPLEVEL_LANG VERILOG_SOURCES TOPLEVEL MODULE EXTRA_ARGS PYTHONPATH

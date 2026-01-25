@@ -5,6 +5,8 @@ from cocotb.clock import Clock
 from cpu.utils import (
     gen_b_type_instruction,
     gen_i_type_instruction,
+    send_unhalt_command,
+    send_write_pc_command,
     write_word_to_mem,
     uart_send_byte,
     wait_for_pipeline_flush,
@@ -35,6 +37,9 @@ async def test_bne_instruction_when_not_equal(dut):
     poison_instruction = gen_i_type_instruction(OP_I_TYPE_ALU, rd_poison, FUNC3_ALU_ADD_SUB, 0, 0x42)
     expected_pc = start_address + offset
 
+    write_word_to_mem(dut.instruction_ram.mem, start_address, bne_instruction)
+    write_word_to_mem(dut.instruction_ram.mem, start_address + 4, poison_instruction)
+
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
@@ -43,26 +48,12 @@ async def test_bne_instruction_when_not_equal(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
-    # HALT CPU before setup
-    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_HALT)
+    await send_write_pc_command(dut, start_address)
     await wait_for_pipeline_flush(dut)
-
-    # Write instructions to memory before setting PC
-    write_word_to_mem(dut.instruction_ram.mem, start_address, bne_instruction)
-    write_word_to_mem(dut.instruction_ram.mem, start_address + 4, poison_instruction)
-
-    # Set PC and registers while CPU is halted
-    dut.cpu.r_PC.value = start_address
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
     dut.cpu.reg_file.Registers[rd_poison].value = 0
-
-    # Wait for values to propagate
-    await ClockCycles(dut.i_Clock, 1)
-
-    # UNHALT CPU to start execution
-    await uart_send_byte(dut.i_Clock, dut.cpu.i_Uart_Tx_In, dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV, DEBUG_OP_UNHALT)
-    await ClockCycles(dut.i_Clock, 3)
+    await send_unhalt_command(dut)
 
     # Track pipeline flush signals
     flush_pipeline_seen = False

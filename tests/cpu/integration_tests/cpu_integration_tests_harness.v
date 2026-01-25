@@ -59,19 +59,22 @@ module cpu_integration_tests_harness ();
   );
   // verilator lint_on  PINMISSING
 
+  wire [31:0] w_axil_data_memory_adjusted_araddr = s_data_memory_axil_araddr - 32'h80000000;
+  wire [31:0] w_axil_data_memory_adjusted_awaddr = s_data_memory_axil_awaddr - 32'h80000000;
+  wire [31:0] w_axil_instruction_memory_adjusted_araddr = s_instruction_memory_axil_araddr - 32'h00000000;
 
   // verilator lint_off PINMISSING
   axil_ram data_ram (
       .rst(i_Reset),
       .clk(i_Clock),
-      .s_axil_araddr(s_data_memory_axil_araddr[15:0]),
+      .s_axil_araddr(w_axil_data_memory_adjusted_araddr[15:0]),
       .s_axil_arvalid(s_data_memory_axil_arvalid),
       .s_axil_arready(s_data_memory_axil_arready),
       .s_axil_rdata(s_data_memory_axil_rdata),
       .s_axil_rvalid(s_data_memory_axil_rvalid),
       .s_axil_rready(s_data_memory_axil_rready),
       .s_axil_awvalid(s_data_memory_axil_awvalid),
-      .s_axil_awaddr(s_data_memory_axil_awaddr[15:0]),
+      .s_axil_awaddr(w_axil_data_memory_adjusted_awaddr[15:0]),
       .s_axil_awready(s_data_memory_axil_awready),
       .s_axil_wvalid(s_data_memory_axil_wvalid),
       .s_axil_wdata(s_data_memory_axil_wdata),
@@ -87,7 +90,7 @@ module cpu_integration_tests_harness ();
   axil_ram instruction_ram (
       .rst(i_Reset),
       .clk(i_Clock),
-      .s_axil_araddr(s_instruction_memory_axil_araddr[15:0]),
+      .s_axil_araddr(w_axil_instruction_memory_adjusted_araddr[15:0]),
       .s_axil_arvalid(s_instruction_memory_axil_arvalid),
       .s_axil_arready(s_instruction_memory_axil_arready),
       .s_axil_rdata(s_instruction_memory_axil_rdata),

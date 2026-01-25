@@ -4,11 +4,14 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_b_type_instruction,
+    send_unhalt_command,
+    send_write_pc_command,
     write_word_to_mem,
+    wait_for_pipeline_flush,
 )
 from cpu.constants import (
     FUNC3_BRANCH_BGEU,
-    ROM_BOUNDARY_ADDR
+    RAM_START_ADDR,
 )
 
 wait_ns = 1
@@ -16,7 +19,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_bgeu_instruction_when_geu(dut):
     """Test BGEU instruction: rs1 >= rs2 (unsigned)"""
-    start_address =  ROM_BOUNDARY_ADDR + 16
+    start_address =  RAM_START_ADDR + 16
     rs1 = 2
     rs1_value = 0xFFFFFFFF
     rs2 = 3
@@ -24,7 +27,7 @@ async def test_bgeu_instruction_when_geu(dut):
     offset = 1024
     bgeu_instruction = gen_b_type_instruction(FUNC3_BRANCH_BGEU, rs1, rs2, offset)
     expected_pc = start_address + offset
-    dut.cpu.r_PC.value = start_address
+
     write_word_to_mem(dut.instruction_ram.mem, start_address, bgeu_instruction)
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
@@ -35,9 +38,15 @@ async def test_bgeu_instruction_when_geu(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
+
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
-    
+    await ClockCycles(dut.i_Clock, 1)
+
+    await send_unhalt_command(dut)
+
     max_cycles = 100
     for _ in range(max_cycles):
         await RisingEdge(dut.i_Clock)
@@ -51,7 +60,7 @@ async def test_bgeu_instruction_when_geu(dut):
 @cocotb.test()
 async def test_bgeu_instruction_when_ltu(dut):
     """Test BGEU instruction: rs1 < rs2 (unsigned)"""
-    start_address =  ROM_BOUNDARY_ADDR + 16
+    start_address =  RAM_START_ADDR + 16
     rs1 = 2
     rs1_value = 0x100
     rs2 = 3
@@ -59,7 +68,7 @@ async def test_bgeu_instruction_when_ltu(dut):
     offset = 1024
     bgeu_instruction = gen_b_type_instruction(FUNC3_BRANCH_BGEU, rs1, rs2, offset)
     expected_pc = start_address + 4
-    dut.cpu.r_PC.value = start_address
+
     write_word_to_mem(dut.instruction_ram.mem, start_address, bgeu_instruction)
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
@@ -70,9 +79,12 @@ async def test_bgeu_instruction_when_ltu(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
     dut.cpu.reg_file.Registers[rs2].value = rs2_value
-    
+    await send_unhalt_command(dut)
+
     max_cycles = 100
     for _ in range(max_cycles):
         await RisingEdge(dut.i_Clock)

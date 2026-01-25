@@ -4,8 +4,11 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_i_type_instruction,
+    send_unhalt_command,
+    send_write_pc_command,
     write_word_to_mem,
     write_half_to_mem,
+    wait_for_pipeline_flush,
 )
 from cpu.constants import (
     OP_I_TYPE_LOAD,
@@ -14,7 +17,7 @@ from cpu.constants import (
 
     PIPELINE_CYCLES,
     
-    ROM_BOUNDARY_ADDR,
+    RAM_START_ADDR,
 )
 
 wait_ns = 1
@@ -22,7 +25,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_lhu_instruction(dut):
     """Test lhu instruction (unsigned halfword load)"""
-    start_address =  ROM_BOUNDARY_ADDR + 96
+    start_address =  RAM_START_ADDR + 96
     rd = 9
     rs1 = 10
     rs1_value = 400
@@ -35,15 +38,18 @@ async def test_lhu_instruction(dut):
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
 
+    write_word_to_mem(dut.instruction_ram.mem, start_address, lhu_instruction)
+    write_half_to_mem(dut.data_ram.mem, mem_address, mem_value & 0xFFFF)
+
     dut.i_Reset.value = 1
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
-    dut.cpu.r_PC.value = start_address
-    write_word_to_mem(dut.instruction_ram.mem, start_address, lhu_instruction)
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
     dut.cpu.reg_file.Registers[rs1].value = rs1_value
-    write_half_to_mem(dut.data_ram.mem, mem_address, mem_value & 0xFFFF)
+    await send_unhalt_command(dut)
 
     await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 
