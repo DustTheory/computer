@@ -3,21 +3,14 @@
 module vga_unit_tests_harness ();
 
   wire        i_Clock;
+  reg         i_Reset;
 
   reg  [15:0] s_axis_tdata;
   reg         s_axis_tvalid;
   wire        s_axis_tready;
 
-  /* Mock VDMA input interface */
   initial begin
-    s_axis_tdata  = 16'h0000;
-    s_axis_tvalid = 1'b0;
-    #100;
-    s_axis_tvalid = 1'b1;
-    repeat (640 * 480) begin
-      @(posedge i_Clock);
-      s_axis_tdata = s_axis_tdata + 16'h0001;
-    end
+    i_Reset = 1'b1;
     s_axis_tvalid = 1'b0;
   end
 
@@ -33,6 +26,7 @@ module vga_unit_tests_harness ();
       .BITS_PER_COLOR_CHANNEL(4)
   ) vga_out (
       .i_Clock(i_Clock),
+      .i_Reset(i_Reset),
       .s_axis_tdata(s_axis_tdata),
       .s_axis_tvalid(s_axis_tvalid),
       .s_axis_tready(s_axis_tready),

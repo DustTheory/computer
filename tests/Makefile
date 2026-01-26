@@ -74,8 +74,8 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_debug_write_pc"
 
 VGA_UNIT_TESTS_TOPLEVEL = vga_unit_tests_harness
-VGA_UNIT_TESTS_MODULE = "vga.unit_tests.test_vga_timing, \
-		vga.unit_tests.test_vga_data"
+VGA_UNIT_TESTS_MODULE = "vga.unit_tests.test_vga_comprehensive, \
+		vga.unit_tests.test_vga_pattern"
 
 TEST_TYPE ?= unit  
 

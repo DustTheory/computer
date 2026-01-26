@@ -3,6 +3,7 @@
 module vga_out #(
     parameter BITS_PER_COLOR_CHANNEL = 4
 ) (
+    input i_Reset,
     input i_Clock,
 
     // AXI-Stream Interface
@@ -19,8 +20,6 @@ module vga_out #(
     output o_Vertical_Sync
 );
 
-  reg [1:0] r_Clock_Counter = 0;
-
   // Horizontal timing for 640x480 @ 60Hz (approx 25MHz pixel clock)
   localparam VISIBLE_H = 640;
   localparam FRONT_PORCH_H = 16;
@@ -35,10 +34,21 @@ module vga_out #(
   localparam BACK_PORCH_V = 33;
   localparam TOTAL_V = VISIBLE_V + FRONT_PORCH_V + SYNC_PULSE_V + BACK_PORCH_V;  // Should be 525
 
+  // Clock divider for VGA timing (100MHz -> 25MHz)
+  reg [1:0] r_Clock_Counter = 0;
+
   // Vertical and horizontal counter registers
   reg [15:0] r_H_Counter = 0;
   reg [15:0] r_V_Counter = 0;
 
+  // Dual row buffers for pixel data
+  reg [15:0] r_Row_Buffer_0 [0:VISIBLE_H-1];
+  reg [15:0] r_Row_Buffer_1 [0:VISIBLE_H-1];
+
+  // Buffer control signals
+  reg r_Active_Buffer = 0;  // 0 = reading from buffer_0, 1 = reading from buffer_1
+  reg [9:0] r_Fill_Addr = 0;  // Address for filling buffer (0 to VISIBLE_H-1)
+  reg r_Blanking_Prefetch_Done = 0;
 
   localparam [1:0] STATE_VISIBLE = 0;
   localparam [1:0] STATE_FRONT_PORCH = 1;
@@ -63,29 +73,74 @@ module vga_out #(
     else r_V_State = STATE_BACK_PORCH;
   end
 
-  always @(posedge i_Clock) begin
-    r_Clock_Counter <= r_Clock_Counter + 1;
-    if(r_Clock_Counter == 2'b00) // Every 4 clock cycles
-    begin
-      if(r_H_Counter == TOTAL_H - 1) // If we've reached the end of the horizontal line
-      begin
-        r_H_Counter <= 0;
-        if (r_V_Counter == TOTAL_V - 1)  // If we've reached the end of the vertical frame
-          r_V_Counter <= 0;
-        else r_V_Counter <= r_V_Counter + 1;
-      end else begin
-        r_H_Counter <= r_H_Counter + 1;
+  always @(posedge i_Clock or posedge i_Reset) begin
+    if (i_Reset) begin
+      r_Clock_Counter <= 0;
+      r_H_Counter <= 0;
+      r_V_Counter <= VISIBLE_V; // Start vertical counter in blanking period
+    end else begin
+      r_Clock_Counter <= r_Clock_Counter + 1;
+
+      if (r_Clock_Counter == 3) begin // VGA pixel clock tick every 4th cycle
+        if(r_H_Counter == TOTAL_H - 1) begin // If we've reached the end of the horizontal line
+          r_H_Counter <= 0;
+          if (r_V_Counter == TOTAL_V - 1)  // If we've reached the end of the vertical frame
+            r_V_Counter <= 0;
+          else begin
+            r_V_Counter <= r_V_Counter + 1;
+          end
+        end else begin
+          r_H_Counter <= r_H_Counter + 1;
+        end
       end
     end
   end
 
+  assign s_axis_tready = !i_Reset && r_V_State == STATE_VISIBLE ? r_Fill_Addr < VISIBLE_H - 1 : !r_Blanking_Prefetch_Done;
 
-  assign s_axis_tready = w_Visible;
-  assign o_mm2s_fsync = (r_H_Counter == 0) && (r_V_Counter == 0);
+  wire w_Frame_Sync_Position = (r_H_Counter == 0) && (r_V_Counter == VISIBLE_V);
+  assign o_mm2s_fsync = w_Frame_Sync_Position;
 
-  assign o_Red = (s_axis_tready && s_axis_tvalid) ? s_axis_tdata[15:12] : {BITS_PER_COLOR_CHANNEL{1'b0}};
-  assign o_Green = (s_axis_tready && s_axis_tvalid) ? s_axis_tdata[10:7] : {BITS_PER_COLOR_CHANNEL{1'b0}};
-  assign o_Blue = (s_axis_tready && s_axis_tvalid) ? s_axis_tdata[4:1] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  // Buffer filling and switching logic
+  always @(posedge i_Clock or posedge i_Reset) begin
+    if (i_Reset) begin
+      r_Fill_Addr <= 0;
+      r_Active_Buffer <= 0;
+      r_Blanking_Prefetch_Done <= 0;
+    end else begin
+      if (s_axis_tready && s_axis_tvalid) begin
+        if (r_Active_Buffer) begin
+          r_Row_Buffer_0[r_Fill_Addr] <= s_axis_tdata;
+        end else begin
+          r_Row_Buffer_1[r_Fill_Addr] <= s_axis_tdata;
+        end
+
+        if (r_Fill_Addr < VISIBLE_H - 1) begin
+          r_Fill_Addr <= r_Fill_Addr + 1;
+        end else if (r_Fill_Addr == VISIBLE_H - 1) begin
+          r_Fill_Addr <= VISIBLE_H;
+        end
+      end
+
+      // Switch buffers and start loading new row soon as we've drawn the visible area of the line
+      if (r_H_Counter == VISIBLE_H && r_V_State == STATE_VISIBLE) begin
+        r_Active_Buffer <= ~r_Active_Buffer;
+        r_Fill_Addr <= 0;
+      end else if(r_Fill_Addr == VISIBLE_H - 1 && r_V_State != STATE_VISIBLE && !r_Blanking_Prefetch_Done) begin
+        r_Active_Buffer <= ~r_Active_Buffer;
+        r_Fill_Addr <= 0;
+        r_Blanking_Prefetch_Done <= 1;
+      end
+    end
+  end
+
+  // VGA reads from opposite buffer that VDMA is filling (proper double buffering)
+  wire [15:0] w_Current_Pixel = w_Visible ?
+    (r_Active_Buffer ? r_Row_Buffer_1[r_H_Counter[9:0]] : r_Row_Buffer_0[r_H_Counter[9:0]]) : 16'h0000;
+
+  assign o_Red = w_Visible ? w_Current_Pixel[15:12] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign o_Green = w_Visible ? w_Current_Pixel[10:7] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign o_Blue = w_Visible ? w_Current_Pixel[4:1] : {BITS_PER_COLOR_CHANNEL{1'b0}};
 
   assign o_Horizontal_Sync = ~(r_H_State == STATE_SYNC);  // Invert for active low
   assign o_Vertical_Sync = ~(r_V_State == STATE_SYNC);  // Invert for active low
