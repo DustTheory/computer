@@ -41,15 +41,14 @@ module vga_out #(
   reg [15:0] r_H_Counter = 0;
   reg [15:0] r_V_Counter = 0;
 
+  // Dual row buffers for pixel data
   reg [15:0] r_Row_Buffer_0 [0:VISIBLE_H-1];
   reg [15:0] r_Row_Buffer_1 [0:VISIBLE_H-1];
 
-  reg        r_Display_Active = 1'b0;
-  reg        r_Display_Buffer = 1'b0;
-  reg        r_Load_Buffer = 1'b0;
-  reg [1:0]  r_Row_Count = 0;
-  reg [9:0]  r_Load_Col = 0;
-  reg        r_Loading = 1'b0;
+  // Buffer control signals
+  reg        r_Active_Buffer = 0;  // 0 = reading from buffer_0, 1 = reading from buffer_1
+  reg [9:0]  r_Fill_Addr = 0;      // Address for filling buffer (0 to VISIBLE_H)
+  reg        r_Blanking_Prefetch_Done = 0;
 
   localparam [1:0] STATE_VISIBLE = 0;
   localparam [1:0] STATE_FRONT_PORCH = 1;
@@ -76,50 +75,13 @@ module vga_out #(
 
   wire w_Pixel_Clock_Tick = (r_Clock_Counter == 3);
 
-  wire w_Fsync_Level = (r_H_Counter == 0) && (r_V_Counter == VISIBLE_V);
-
-  assign s_axis_tready = (r_Row_Count < 2) && !w_Fsync_Level;
-
-  wire w_Load_Handshake = s_axis_tvalid && s_axis_tready;
-  wire w_Load_Complete = w_Load_Handshake && (r_Load_Col == VISIBLE_H - 1);
-
-  wire w_Row_Consume = w_Pixel_Clock_Tick && (r_V_Counter < VISIBLE_V) &&
-                       (r_H_Counter == VISIBLE_H - 1) && r_Display_Active && (r_Row_Count > 0);
-
-  wire w_Line_Start = w_Pixel_Clock_Tick && (r_H_Counter == TOTAL_H - 1);
-
-  wire w_Fsync_Event = w_Pixel_Clock_Tick && (r_H_Counter == 0) && (r_V_Counter == VISIBLE_V);
-
   always @(posedge i_Clock or posedge i_Reset) begin
     if (i_Reset) begin
       r_Clock_Counter <= 0;
       r_H_Counter <= 0;
       r_V_Counter <= VISIBLE_V; // Start vertical counter in blanking period
-      r_Display_Active <= 1'b0;
-      r_Display_Buffer <= 1'b0;
-      r_Load_Buffer <= 1'b0;
-      r_Row_Count <= 0;
-      r_Load_Col <= 0;
-      r_Loading <= 1'b0;
     end else begin
       r_Clock_Counter <= r_Clock_Counter + 1;
-
-      // AXI-Stream row loading logic
-      if (w_Load_Handshake) begin
-        r_Loading <= 1'b1; 
-        if (r_Load_Buffer == 1'b0)
-          r_Row_Buffer_0[r_Load_Col] <= s_axis_tdata;
-        else
-          r_Row_Buffer_1[r_Load_Col] <= s_axis_tdata;
-
-        if (r_Load_Col == VISIBLE_H - 1) begin
-          r_Load_Col <= 0;
-          r_Loading <= 1'b0;
-          r_Load_Buffer <= ~r_Load_Buffer;
-        end else begin
-          r_Load_Col <= r_Load_Col + 1;
-        end
-      end
 
       if (w_Pixel_Clock_Tick) begin // VGA pixel clock tick every 4th cycle
         if(r_H_Counter == TOTAL_H - 1) begin // If we've reached the end of the horizontal line
@@ -132,55 +94,66 @@ module vga_out #(
         end else begin
           r_H_Counter <= r_H_Counter + 1;
         end
-
-        // Start-of-line handling (after wrap) to activate display buffer
-        if (w_Line_Start) begin
-          if ((r_V_Counter == TOTAL_V - 1) ? 1'b1 : ((r_V_Counter + 1) < VISIBLE_V)) begin
-            r_Display_Active <= (r_Row_Count > 0);
-          end else begin
-            r_Display_Active <= 1'b0;
-          end
-        end
-
-        // End-of-visible-line consumption
-        if (w_Row_Consume) begin
-          r_Display_Buffer <= ~r_Display_Buffer;
-          r_Display_Active <= 1'b0;
-        end
-
-        // Frame sync: reset row buffering at start of vertical back porch
-        if (w_Fsync_Event) begin
-          r_Display_Active <= 1'b0;
-          r_Display_Buffer <= 1'b0;
-          r_Load_Buffer <= 1'b0;
-          r_Load_Col <= 0;
-          r_Loading <= 1'b0;
-        end
-      end
-
-      // Row count update (handles simultaneous load/consume)
-      if (w_Fsync_Event) begin
-        r_Row_Count <= 0;
-      end else begin
-        case ({w_Load_Complete, w_Row_Consume})
-          2'b10: r_Row_Count <= r_Row_Count + 1;
-          2'b01: r_Row_Count <= r_Row_Count - 1;
-          default: r_Row_Count <= r_Row_Count;
-        endcase
       end
     end
   end
 
-  assign o_mm2s_fsync = w_Fsync_Level;
+  wire w_Frame_Sync_Level = (r_H_Counter == 0) && (r_V_Counter == VISIBLE_V);
+  wire w_Frame_Sync_Event = w_Pixel_Clock_Tick && w_Frame_Sync_Level;
+  assign o_mm2s_fsync = w_Frame_Sync_Level;
 
-  wire [15:0] w_Current_Pixel = (r_H_Counter < VISIBLE_H)
-    ? ((r_Display_Buffer == 1'b0) ? r_Row_Buffer_0[r_H_Counter[9:0]] : r_Row_Buffer_1[r_H_Counter[9:0]])
-    : 16'h0000;
-  assign o_Red = (w_Visible && r_Display_Active) ? w_Current_Pixel[15:12] : {BITS_PER_COLOR_CHANNEL{1'b0}};
-  assign o_Green = (w_Visible && r_Display_Active) ? w_Current_Pixel[10:7] : {BITS_PER_COLOR_CHANNEL{1'b0}};
-  assign o_Blue = (w_Visible && r_Display_Active) ? w_Current_Pixel[4:1] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign s_axis_tready = (!i_Reset) && (!w_Frame_Sync_Level) &&
+                         ((r_V_State == STATE_VISIBLE) ? (r_Fill_Addr < VISIBLE_H)
+                                                       : (!r_Blanking_Prefetch_Done && (r_Fill_Addr < VISIBLE_H)));
 
-  assign o_Horizontal_Sync = ~(r_H_State == STATE_SYNC); 
-  assign o_Vertical_Sync = ~(r_V_State == STATE_SYNC);
+  // Buffer filling and switching logic
+  always @(posedge i_Clock or posedge i_Reset) begin
+    if (i_Reset) begin
+      r_Fill_Addr <= 0;
+      r_Active_Buffer <= 0;
+      r_Blanking_Prefetch_Done <= 0;
+    end else begin
+      if (w_Frame_Sync_Event) begin
+        r_Fill_Addr <= 0;
+        r_Active_Buffer <= 0;
+        r_Blanking_Prefetch_Done <= 0;
+      end
+
+      if (s_axis_tready && s_axis_tvalid) begin
+        if (r_Fill_Addr < VISIBLE_H) begin
+          if (r_Active_Buffer) begin
+            r_Row_Buffer_0[r_Fill_Addr] <= s_axis_tdata;
+          end else begin
+            r_Row_Buffer_1[r_Fill_Addr] <= s_axis_tdata;
+          end
+
+          if (r_Fill_Addr < VISIBLE_H - 1) begin
+            r_Fill_Addr <= r_Fill_Addr + 1;
+          end else begin
+            r_Fill_Addr <= VISIBLE_H;
+          end
+        end
+      end
+
+      if (w_Pixel_Clock_Tick && (r_H_Counter == VISIBLE_H) && (r_V_State == STATE_VISIBLE)) begin
+        r_Active_Buffer <= ~r_Active_Buffer;
+        r_Fill_Addr <= 0;
+      end else if ((r_Fill_Addr == VISIBLE_H) && (r_V_State != STATE_VISIBLE) && !r_Blanking_Prefetch_Done) begin
+        r_Active_Buffer <= ~r_Active_Buffer;
+        r_Fill_Addr <= 0;
+        r_Blanking_Prefetch_Done <= 1;
+      end
+    end
+  end
+
+  wire [15:0] w_Current_Pixel = w_Visible ?
+    (r_Active_Buffer ? r_Row_Buffer_1[r_H_Counter[9:0]] : r_Row_Buffer_0[r_H_Counter[9:0]]) : 16'h0000;
+
+  assign o_Red = w_Visible ? w_Current_Pixel[15:12] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign o_Green = w_Visible ? w_Current_Pixel[10:7] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+  assign o_Blue = w_Visible ? w_Current_Pixel[4:1] : {BITS_PER_COLOR_CHANNEL{1'b0}};
+
+  assign o_Horizontal_Sync = ~(r_H_State == STATE_SYNC);  // Invert for active low
+  assign o_Vertical_Sync = ~(r_V_State == STATE_SYNC);  // Invert for active low
 
 endmodule

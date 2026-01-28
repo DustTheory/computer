@@ -16,9 +16,11 @@ async def wait_for_fsync(dut):
 			return
 
 
-async def drive_vdma_stream(dut, pixel_func, rows=VISIBLE_V, cols=VISIBLE_H, gap_func=None):
-	"""Drive AXI-Stream pixel data honoring tready and optional gaps."""
-	await wait_for_fsync(dut)
+async def drive_vdma_stream(
+	dut, pixel_func, rows=VISIBLE_V, cols=VISIBLE_H, gap_func=None, wait_for_fsync_pulse=True
+):
+	if wait_for_fsync_pulse:
+		await wait_for_fsync(dut)
 
 	x = 0
 	y = 0
