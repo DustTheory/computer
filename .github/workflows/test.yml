@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        test-type: [unit, integration]
+        test-type: [unit, integration, vga]
       fail-fast: false
 
     steps:
