@@ -4,11 +4,16 @@ module vga_out #(
     parameter BITS_PER_COLOR_CHANNEL = 4
 ) (
     input i_Reset,
+
+    (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF s_axis, ASSOCIATED_RESET i_Reset" *)
     input i_Clock,
 
     // AXI-Stream Interface
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 s_axis TDATA" *)
     input  [15:0] s_axis_tdata,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 s_axis TVALID" *)
     input         s_axis_tvalid,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 s_axis TREADY" *)
     output        s_axis_tready,
 
     output o_mm2s_fsync,
