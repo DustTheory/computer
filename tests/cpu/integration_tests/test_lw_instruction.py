@@ -4,6 +4,9 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_i_type_instruction,
+    send_write_pc_command,
+    send_unhalt_command,
+    wait_for_pipeline_flush,
     write_word_to_mem,
 )
 from cpu.constants import (
@@ -13,7 +16,7 @@ from cpu.constants import (
 
     PIPELINE_CYCLES,
 
-    ROM_BOUNDARY_ADDR,
+    RAM_START_ADDR,
 )
 
 wait_ns = 1
@@ -21,7 +24,7 @@ wait_ns = 1
 @cocotb.test()
 async def test_lw_instruction(dut):
     """Test lw instruction"""
-    start_address =  ROM_BOUNDARY_ADDR + 64
+    start_address =  RAM_START_ADDR + 64
     rd = 5
     rs1 = 6
     rs1_value = 0
@@ -31,10 +34,7 @@ async def test_lw_instruction(dut):
 
     lw_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_W, rs1, offset)
   
-    dut.cpu.r_PC.value = start_address
     write_word_to_mem(dut.instruction_ram.mem, start_address, lw_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
-
     write_word_to_mem(dut.data_ram.mem, mem_address, mem_value)
     
     clock = Clock(dut.i_Clock, wait_ns, "ns")
@@ -44,6 +44,11 @@ async def test_lw_instruction(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    await send_unhalt_command(dut)
 
     await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
 

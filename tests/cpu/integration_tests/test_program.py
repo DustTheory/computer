@@ -7,13 +7,16 @@ from cpu.constants import (
 
     FUNC3_BRANCH_BLT,
     FUNC3_ALU_ADD_SUB,
-    
-    ROM_BOUNDARY_ADDR,
+
+    RAM_START_ADDR,
 )
 from cpu.utils import (
     gen_i_type_instruction,
     gen_b_type_instruction,
     gen_r_type_instruction,
+    send_unhalt_command,
+    send_write_pc_command,
+    wait_for_pipeline_flush,
     write_instructions,
 )
 
@@ -36,8 +39,7 @@ async def test_sum_loop_ram(dut):
         gen_i_type_instruction(OP_I_TYPE_ALU, 0, FUNC3_ALU_ADD_SUB, 0, 0), # addi $0, $0, 0 (nop)
     ]
 
-    start_address =  ROM_BOUNDARY_ADDR + 0x0
-    dut.cpu.r_PC.value = start_address
+    start_address =  RAM_START_ADDR + 0x0
     write_instructions(dut.instruction_ram.mem, start_address, instructions)
 
     haltInstructions = 100
@@ -49,6 +51,10 @@ async def test_sum_loop_ram(dut):
     dut.i_Reset.value = 1
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
+
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
+    await send_unhalt_command(dut)
 
     while dut.cpu.r_PC.value.integer < endAddress and haltInstructions > 0:
         await ClockCycles(dut.i_Clock, 4)
@@ -80,7 +86,6 @@ async def test_sum_loop_rom_file(dut):
     ]
 
     start_address = 512
-    dut.cpu.r_PC.value = start_address
 
     haltInstructions = 100
     endAddress = start_address + len(instructions) * 4
@@ -91,6 +96,10 @@ async def test_sum_loop_rom_file(dut):
     dut.i_Reset.value = 1
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
+
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
+    await send_unhalt_command(dut)
 
     while dut.cpu.r_PC.value.integer < endAddress and haltInstructions > 0:
         await ClockCycles(dut.i_Clock, 4)

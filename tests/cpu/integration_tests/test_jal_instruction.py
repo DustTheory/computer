@@ -4,9 +4,9 @@ from cocotb.clock import Clock
 
 from cpu.constants import (
     OP_J_TYPE,
-    ROM_BOUNDARY_ADDR,
+    RAM_START_ADDR,
 )
-from cpu.utils import write_word_to_mem
+from cpu.utils import send_unhalt_command, send_write_pc_command, write_word_to_mem, wait_for_pipeline_flush
 
 wait_ns = 1
 
@@ -15,7 +15,7 @@ async def test_jal_instruction(dut):
     """Test JAL instruction"""
 
     dest_register = 13
-    start_address =  ROM_BOUNDARY_ADDR + 256
+    start_address =  RAM_START_ADDR + 256
     magic_value = 0b00000000000000000000001010101010000000000
     
     j_type_imm = 0b10101010100
@@ -28,7 +28,6 @@ async def test_jal_instruction(dut):
     jal_instruction |= magic_value << 12
 
     write_word_to_mem(dut.instruction_ram.mem, start_address, jal_instruction)
-    dut.cpu.r_PC.value = start_address
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
     cocotb.start_soon(clock.start())
@@ -37,6 +36,10 @@ async def test_jal_instruction(dut):
     await ClockCycles(dut.i_Clock, 1)
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
+
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
+    await send_unhalt_command(dut)
 
     max_cycles = 200
     pc_reached = False

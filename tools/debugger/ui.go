@@ -15,13 +15,14 @@ type AppState int
 const (
 	StateSelectPort AppState = iota
 	StateMainMenu
+	StateInput      // Text input mode for commands that need parameters
+	StateInputValue // Second input for set register (value)
 )
 
 // CPUState tracks the current state of the CPU
 type CPUState struct {
 	haltSet   bool
 	resetSet  bool
-	lastPing  time.Time
 	connected bool
 	pc        uint32
 	pcValid   bool
@@ -45,6 +46,11 @@ type model struct {
 	scrollOffset   int  // Offset for scrolling through responses
 	autoScroll     bool // Auto-scroll to latest response
 	cpuState       CPUState
+	// Input mode fields
+	inputBuffer    string  // Current input text
+	inputPrompt    string  // Prompt to show user
+	pendingCommand Command // Command waiting for input
+	inputRegNum    uint8   // Register number (for set register, stored after first input)
 }
 
 type portsListMsg struct {
@@ -304,9 +310,57 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.state == StateMainMenu {
 				cmd := m.commands[m.cursor]
 				if commands[cmd].implemented {
-					m.executing = true
-					m.status = fmt.Sprintf("Executing: %s...", commands[cmd].name)
-					return m, m.executeCommand(cmd)
+					// Check if command needs input
+					if cmd.NeedsInput() {
+						m.state = StateInput
+						m.pendingCommand = cmd
+						m.inputBuffer = ""
+						m.inputPrompt = cmd.GetInputPrompt()
+						m.status = "Enter value and press Enter"
+					} else {
+						m.executing = true
+						m.status = fmt.Sprintf("Executing: %s...", commands[cmd].name)
+						return m, m.executeCommand(cmd)
+					}
+				}
+			} else if m.state == StateInput {
+				// Process input for the pending command
+				return m, m.processInput()
+			} else if m.state == StateInputValue {
+				// Process second input (value for set register)
+				return m, m.processValueInput()
+			}
+
+		case "esc":
+			// Cancel input mode
+			if m.state == StateInput || m.state == StateInputValue {
+				m.state = StateMainMenu
+				m.inputBuffer = ""
+				m.status = "Input cancelled"
+			}
+
+		case "backspace":
+			if (m.state == StateInput || m.state == StateInputValue) && len(m.inputBuffer) > 0 {
+				m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
+			}
+
+		default:
+			// Handle text input
+			if m.state == StateInput || m.state == StateInputValue {
+				// Only allow valid characters (hex digits for address, digits for register)
+				char := msg.String()
+				if len(char) == 1 {
+					if m.pendingCommand == CmdJumpToAddress || m.state == StateInputValue {
+						// Allow hex digits for address/value
+						if (char >= "0" && char <= "9") || (char >= "a" && char <= "f") || (char >= "A" && char <= "F") {
+							m.inputBuffer += char
+						}
+					} else {
+						// Allow only digits for register number
+						if char >= "0" && char <= "9" {
+							m.inputBuffer += char
+						}
+					}
 				}
 			}
 		}
@@ -341,11 +395,15 @@ func (m *model) updateCPUState(cmd Command, pcValue uint32) {
 		m.cpuState.resetSet = true
 	case CmdUnreset:
 		m.cpuState.resetSet = false
-	case CmdPing:
-		m.cpuState.lastPing = time.Now()
 	case CmdReadPC:
 		m.cpuState.pc = pcValue
 		m.cpuState.pcValid = true
+	case CmdReadRegister, CmdSetRegister:
+		m.cpuState.haltSet = true // CPU stays halted after register access
+	case CmdJumpToAddress:
+		m.cpuState.pc = pcValue
+		m.cpuState.pcValid = true
+		m.cpuState.haltSet = true // CPU stays halted after jump
 	}
 }
 
@@ -405,6 +463,178 @@ func (m model) executeCommand(cmd Command) tea.Cmd {
 			success: true,
 			message: fmt.Sprintf("✓ %s sent", cmd.GetName()),
 			cmd:     cmd,
+		}
+	}
+}
+
+func (m *model) processInput() tea.Cmd {
+	input := m.inputBuffer
+
+	switch m.pendingCommand {
+	case CmdReadRegister:
+		// Parse register number
+		var regNum int
+		_, err := fmt.Sscanf(input, "%d", &regNum)
+		if err != nil || regNum < 0 || regNum > 31 {
+			m.state = StateMainMenu
+			m.status = "Invalid register number (0-31)"
+			return nil
+		}
+
+		m.state = StateMainMenu
+		m.executing = true
+		m.status = fmt.Sprintf("Reading register x%d...", regNum)
+
+		return m.executeReadRegister(uint8(regNum))
+
+	case CmdSetRegister:
+		// Parse register number, then prompt for value
+		var regNum int
+		_, err := fmt.Sscanf(input, "%d", &regNum)
+		if err != nil || regNum < 0 || regNum > 31 {
+			m.state = StateMainMenu
+			m.status = "Invalid register number (0-31)"
+			return nil
+		}
+
+		m.inputRegNum = uint8(regNum)
+		m.state = StateInputValue
+		m.inputBuffer = ""
+		m.inputPrompt = fmt.Sprintf("Value for x%d (hex): ", regNum)
+		return nil
+
+	case CmdJumpToAddress:
+		// Parse address (hex)
+		var addr uint32
+		_, err := fmt.Sscanf(input, "%x", &addr)
+		if err != nil {
+			m.state = StateMainMenu
+			m.status = "Invalid address (use hex, e.g. 1000)"
+			return nil
+		}
+
+		m.state = StateMainMenu
+		m.executing = true
+		m.status = fmt.Sprintf("Jumping to 0x%08X...", addr)
+
+		return m.executeJumpToAddress(addr)
+	}
+
+	m.state = StateMainMenu
+	return nil
+}
+
+func (m *model) processValueInput() tea.Cmd {
+	input := m.inputBuffer
+
+	// Parse value (hex)
+	var value uint32
+	_, err := fmt.Sscanf(input, "%x", &value)
+	if err != nil {
+		m.state = StateMainMenu
+		m.status = "Invalid value (use hex)"
+		return nil
+	}
+
+	m.state = StateMainMenu
+	m.executing = true
+	m.status = fmt.Sprintf("Setting x%d = 0x%08X...", m.inputRegNum, value)
+
+	return m.executeSetRegister(m.inputRegNum, value)
+}
+
+func (m model) executeReadRegister(regNum uint8) tea.Cmd {
+	return func() tea.Msg {
+		// Send READ_REGISTER opcode with register number
+		data := []byte{regNum}
+		err := m.serialMgr.SendCommandWithData(op_READ_REGISTER, data)
+		if err != nil {
+			return commandCompleteMsg{
+				success: false,
+				message: fmt.Sprintf("Failed to send command: %v", err),
+			}
+		}
+
+		// Wait for 4-byte response
+		time.Sleep(300 * time.Millisecond)
+
+		responses := m.serialMgr.GetResponses()
+		if len(responses) > 0 {
+			lastResp := responses[len(responses)-1]
+			if len(lastResp.Data) >= 4 {
+				value := uint32(lastResp.Data[0]) |
+					(uint32(lastResp.Data[1]) << 8) |
+					(uint32(lastResp.Data[2]) << 16) |
+					(uint32(lastResp.Data[3]) << 24)
+
+				return commandCompleteMsg{
+					success: true,
+					message: fmt.Sprintf("✓ x%d = 0x%08X", regNum, value),
+					cmd:     CmdReadRegister,
+				}
+			}
+		}
+
+		return commandCompleteMsg{
+			success: false,
+			message: "Failed to read register value",
+			cmd:     CmdReadRegister,
+		}
+	}
+}
+
+func (m model) executeSetRegister(regNum uint8, value uint32) tea.Cmd {
+	return func() tea.Msg {
+		// Send WRITE_REGISTER opcode with register number and value (little-endian)
+		data := []byte{
+			regNum,
+			byte(value),
+			byte(value >> 8),
+			byte(value >> 16),
+			byte(value >> 24),
+		}
+		err := m.serialMgr.SendCommandWithData(op_WRITE_REGISTER, data)
+		if err != nil {
+			return commandCompleteMsg{
+				success: false,
+				message: fmt.Sprintf("Failed to send command: %v", err),
+			}
+		}
+
+		time.Sleep(150 * time.Millisecond)
+
+		return commandCompleteMsg{
+			success: true,
+			message: fmt.Sprintf("✓ x%d = 0x%08X", regNum, value),
+			cmd:     CmdSetRegister,
+		}
+	}
+}
+
+func (m model) executeJumpToAddress(addr uint32) tea.Cmd {
+	return func() tea.Msg {
+		// Send WRITE_PC opcode with address (little-endian)
+		data := []byte{
+			byte(addr),
+			byte(addr >> 8),
+			byte(addr >> 16),
+			byte(addr >> 24),
+		}
+		err := m.serialMgr.SendCommandWithData(op_WRITE_PC, data)
+		if err != nil {
+			return commandCompleteMsg{
+				success: false,
+				message: fmt.Sprintf("Failed to send command: %v", err),
+			}
+		}
+
+		time.Sleep(150 * time.Millisecond)
+
+		return commandCompleteMsg{
+			success: true,
+			message: fmt.Sprintf("✓ PC = 0x%08X", addr),
+			cmd:     CmdJumpToAddress,
+			pcValue: addr,
 		}
 	}
 }
@@ -499,6 +729,30 @@ func (m model) renderCommandPanel(width int, height int) string {
 
 	s.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86")).Render("Commands"))
 	s.WriteString("\n\n")
+
+	// Check if in input mode
+	if m.state == StateInput || m.state == StateInputValue {
+		// Show input prompt
+		cmdInfo := commands[m.pendingCommand]
+		s.WriteString(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("170")).
+			Bold(true).
+			Render(cmdInfo.name) + "\n\n")
+
+		s.WriteString(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("255")).
+			Render(m.inputPrompt))
+
+		// Show input with cursor
+		inputStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("cyan")).
+			Bold(true)
+		s.WriteString(inputStyle.Render(m.inputBuffer + "█") + "\n\n")
+
+		s.WriteString(helpStyle.Render("⏎ confirm • esc cancel"))
+
+		return panelStyle.Render(s.String())
+	}
 
 	// Commands list
 	for i, cmd := range m.commands {
@@ -608,28 +862,9 @@ func (m model) renderCPUState(width int, height int) string {
 	} else {
 		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("📍 PC: unknown"))
 	}
-	s.WriteString("\n\n")
-
-	// Last ping
-	if !m.cpuState.lastPing.IsZero() {
-		elapsed := time.Since(m.cpuState.lastPing)
-		pingStr := fmt.Sprintf("🏓 Last ping: %s ago", formatDuration(elapsed))
-		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render(pingStr))
-	} else {
-		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("🏓 No ping yet"))
-	}
+	s.WriteString("\n")
 
 	return panelStyle.Render(s.String())
-}
-
-func formatDuration(d time.Duration) string {
-	if d < time.Second {
-		return fmt.Sprintf("%dms", d.Milliseconds())
-	}
-	if d < time.Minute {
-		return fmt.Sprintf("%.1fs", d.Seconds())
-	}
-	return fmt.Sprintf("%.1fm", d.Minutes())
 }
 
 func (m model) renderSerialMonitor(width int, height int) string {

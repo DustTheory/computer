@@ -4,8 +4,11 @@ from cocotb.clock import Clock
 
 from cpu.utils import (
     gen_i_type_instruction,
-    write_word_to_mem,
+    send_unhalt_command,
+    send_write_pc_command,
     write_byte_to_mem,
+    write_word_to_mem,
+    wait_for_pipeline_flush,
 )
 from cpu.constants import (
     OP_I_TYPE_LOAD,
@@ -14,7 +17,7 @@ from cpu.constants import (
 
     PIPELINE_CYCLES,
 
-    ROM_BOUNDARY_ADDR,
+    RAM_START_ADDR,
 )
 
 wait_ns = 1
@@ -24,7 +27,7 @@ wait_ns = 1
 async def test_lb_instruction_when_equal(dut):
     """Test lb instruction"""
 
-    start_address =  ROM_BOUNDARY_ADDR + 0
+    start_address =  RAM_START_ADDR + 0
     rd = 1
     rs1 = 2
     rs1_value = 0
@@ -34,9 +37,7 @@ async def test_lb_instruction_when_equal(dut):
 
     lb_instruction = gen_i_type_instruction(OP_I_TYPE_LOAD, rd, FUNC3_LS_B, rs1, offset)
 
-    dut.cpu.r_PC.value = start_address
     write_word_to_mem(dut.instruction_ram.mem, start_address, lb_instruction)
-    dut.cpu.reg_file.Registers[rs1].value = rs1_value
     write_byte_to_mem(dut.data_ram.mem, mem_address, mem_value & 0xFF)
 
     clock = Clock(dut.i_Clock, wait_ns, "ns")
@@ -47,7 +48,13 @@ async def test_lb_instruction_when_equal(dut):
     dut.i_Reset.value = 0
     await ClockCycles(dut.i_Clock, 1)
 
-    await ClockCycles(dut.i_Clock, PIPELINE_CYCLES)
+  
+    await send_write_pc_command(dut, start_address)
+    await wait_for_pipeline_flush(dut)
+    dut.cpu.reg_file.Registers[rs1].value = rs1_value
+    await send_unhalt_command(dut)
+
+    await ClockCycles(dut.i_Clock, PIPELINE_CYCLES + 3)
 
     assert dut.cpu.reg_file.Registers[rd].value.integer == mem_value, f"LB instruction failed: Rd value is {dut.cpu.reg_file.Registers[rd].value.integer:#010x}, expected {mem_value:#010x}"
 

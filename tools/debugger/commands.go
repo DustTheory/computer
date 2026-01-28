@@ -32,12 +32,12 @@ var commands = map[Command]CommandInfo{
 	CmdUnhalt:        {"Unhalt CPU", "Resume CPU execution", true},
 	CmdReset:         {"Reset CPU", "Reset the CPU", true},
 	CmdUnreset:       {"Unreset CPU", "Take CPU out of reset", true},
-	CmdReadRegister:  {"Read Register", "Read a specific register value", false},
+	CmdReadRegister:  {"Read Register", "Read a specific register value (CPU stays halted)", true},
 	CmdFullDump:      {"Full Dump", "Read all registers and memory", false},
 	CmdPing:          {"Ping CPU", "Check if CPU is responsive", true},
 	CmdReadPC:        {"Read PC", "Read program counter value", true},
-	CmdSetRegister:   {"Set Register", "Write value to a register", false},
-	CmdJumpToAddress: {"Jump to Address", "Set PC to specific address", false},
+	CmdSetRegister:   {"Set Register", "Write value to a register (CPU stays halted)", true},
+	CmdJumpToAddress: {"Jump to Address", "Set PC to specific address (CPU stays halted)", true},
 	CmdLoadProgram:   {"Load Program", "Load program from file", false},
 	CmdStatsDump:     {"Read Stats", "Read CPU statistics", false},
 	CmdReadMemory:    {"Read Memory", "Read memory at address", false},
@@ -59,8 +59,38 @@ func (c Command) GetOpCode() (OpCode, bool) {
 		return op_PING, true
 	case CmdReadPC:
 		return op_READ_PC, true
+	case CmdReadRegister:
+		return op_READ_REGISTER, true
+	case CmdSetRegister:
+		return op_WRITE_REGISTER, true
+	case CmdJumpToAddress:
+		return op_WRITE_PC, true
 	default:
 		return 0, false
+	}
+}
+
+// NeedsInput returns true if the command requires user input
+func (c Command) NeedsInput() bool {
+	switch c {
+	case CmdReadRegister, CmdSetRegister, CmdJumpToAddress:
+		return true
+	default:
+		return false
+	}
+}
+
+// GetInputPrompt returns the prompt for user input
+func (c Command) GetInputPrompt() string {
+	switch c {
+	case CmdReadRegister:
+		return "Register number (0-31): "
+	case CmdSetRegister:
+		return "Register number (0-31): "
+	case CmdJumpToAddress:
+		return "Address (hex, e.g. 1000): "
+	default:
+		return ""
 	}
 }
 

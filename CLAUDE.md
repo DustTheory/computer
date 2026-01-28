@@ -50,7 +50,7 @@ You don't need to manually read docs - the relevant rules load automatically bas
 
 - **DDR3**: Requires 200 MHz ref_clk, Bank 34 only (voltage isolation)
 - **UART**: 115200 baud @ 81.25 MHz ≈ 706 clocks/bit
-- **Memory map**: ROM < 0x1000, RAM ≥ 0x1000
+- **Memory map**: CPU base 0x80000000, ROM 0x80000000-0x80000FFF, RAM 0x80001000+, FB at end
 - **Pipeline**: 3-stage, no hazard detection (insert NOPs manually)
 
 ## Next Steps

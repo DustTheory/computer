@@ -17,12 +17,17 @@ For detailed CPU internals, see [../ai/cpu-architecture.md](../ai/cpu-architectu
 ## Memory Map
 
 ```
-0x00000000 - 0x00000FFF: Boot ROM (4KB)
-0x10000000 - 0x1FFFFFFF: DDR3 RAM (via MIG, 256MB planned)
-0x20000000 - 0x2FFFFFFF: Framebuffer
-0x30000000 - 0x3FFFFFFF: Peripherals
-0x40000000 - 0x4FFFFFFF: Debug peripheral
+0x80000000 - 0x80000FFF: Boot ROM (4KB BRAM, internal to CPU)
+0x80001000 - 0x87F1DFFF: General RAM (~127MB DDR3 via MIG)
+0x87F1E000 - 0x87F8EFFF: Framebuffer 0 (462,848 bytes, 640x480x12bpp)
+0x87F8F000 - 0x87FFFFFF: Framebuffer 1 (462,848 bytes, 640x480x12bpp)
 ```
+
+Key addresses:
+- CPU_BASE_ADDR: 0x80000000 (PC starts here on reset)
+- ROM_BOUNDARY_ADDR: 0x80000FFF (last ROM address)
+- RAM_START_ADDR: 0x80001000 (first DDR3 address)
+- Framebuffers are 4K-aligned for DMA compatibility
 
 See [../ai/memory-map.md](../ai/memory-map.md) for detailed memory layout.
 
@@ -30,7 +35,7 @@ See [../ai/memory-map.md](../ai/memory-map.md) for detailed memory layout.
 
 - VGA output: 640x480 @ 60Hz
 - Dual framebuffer for tear-free rendering
-- Pixel format: TBD (likely 8-bit indexed color)
+- Pixel format: 12-bit RGB (4 bits per channel)
 
 The video system uses double buffering to prevent tearing. While one framebuffer is being displayed, the CPU can write to the other. A register controls which buffer is active.
 
