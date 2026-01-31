@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `include "cpu_core_params.vh"
 `include "debug_peripheral.vh"
+`include "memory.vh"
 
 module debug_peripheral (
     input i_Clock,
@@ -9,7 +10,7 @@ module debug_peripheral (
     input  i_Uart_Tx_In,
     output o_Uart_Rx_Out,
 
-    input [31:0] i_PC,
+    input [XLEN-1:0] i_PC,
     input i_Pipeline_Flushed,
 
     output reg o_Halt_Cpu,
@@ -17,14 +18,22 @@ module debug_peripheral (
 
     output reg o_Reg_Write_Enable,
     output reg [4:0] o_Reg_Write_Addr,
-    output reg [31:0] o_Reg_Write_Data,
+    output reg [XLEN-1:0] o_Reg_Write_Data,
 
     output reg o_Reg_Read_Enable,
     output reg [4:0] o_Reg_Read_Addr,
-    input [31:0] i_Reg_Read_Data,
+    input [XLEN-1:0] i_Reg_Read_Data,
 
     output reg o_Write_PC_Enable,
-    output reg [31:0] o_Write_PC_Data
+    output reg [XLEN-1:0] o_Write_PC_Data,
+
+    output reg o_Memory_LS_Enable,
+    output reg [LS_SEL_WIDTH:0] o_Memory_LS_Type,
+    output reg o_Memory_LS_Write_Enable,
+    output reg [XLEN-1:0] o_Memory_LS_Address,
+    output reg [XLEN-1:0] o_Memory_LS_Data,
+    input [XLEN-1:0] i_Memory_Data_Out,
+    input [MEMORY_STATE_WIDTH:0] i_Memory_State
 
 );
 
@@ -43,13 +52,17 @@ module debug_peripheral (
   /* ----------------UART_TRANSMITTER---------------- */
 
   // Input buffer (Stack)
-  reg [7:0] input_buffer[0:255];
+  reg [7:0] input_buffer[0:4100]; // An entire page of memory + slack
   reg [7:0] input_buffer_head = 0;
 
   // Output buffer (FIFO)
-  reg [7:0] output_buffer[0:255];
+  reg [7:0] output_buffer[0:4100]; // An entire page of memory + slack
   reg [7:0] output_buffer_head = 0;
   reg [7:0] output_buffer_tail = 0;
+
+  // Memory Operation States
+  reg [15:0] r_Bytes_Remaining = 0;
+  reg [XLEN-1:0] r_Memory_Address = 0;
 
   reg r_Tx_DV;
   reg [7:0] r_Tx_Byte = 0;
@@ -98,6 +111,10 @@ module debug_peripheral (
       input_buffer_head <= 0;
       o_Write_PC_Enable <= 0;
       o_Write_PC_Data <= 0;
+      o_Memory_LS_Address <= 0;
+      o_Memory_LS_Data <= 0;
+      o_Memory_LS_Type <= LS_TYPE_NONE;
+      o_Memory_LS_Enable <= 0;
     end else begin
       case (r_State)
         s_IDLE: begin
@@ -216,6 +233,87 @@ module debug_peripheral (
                 o_Reg_Write_Enable <= 0;
                 r_State <= s_IDLE;
               end
+            end
+            op_READ_MEMORY: begin
+              o_Halt_Cpu <= 1;
+              o_Memory_LS_Enable <= 1;
+              if(w_Rx_DV && input_buffer_head < 8) begin
+                input_buffer[input_buffer_head] <= w_Rx_Byte;
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if(i_Pipeline_Flushed && input_buffer_head == 7) begin
+                r_Memory_Address <= {
+                  input_buffer[3], input_buffer[2], input_buffer[1], input_buffer[0]
+                };
+                r_Bytes_Remaining <= {input_buffer[5], input_buffer[4]};
+                input_buffer_head <= input_buffer_head + 1;
+              end
+              if(i_Pipeline_Flushed && r_Bytes_Remaining > 0) begin
+                case (i_Memory_State)
+                    IDLE: begin
+                      o_Memory_LS_Address <= r_Memory_Address;
+                      case(r_Bytes_Remaining & 0'b11)
+                        1: o_Memory_LS_Type    <= LS_BYTE;
+                        2: o_Memory_LS_Type    <= LS_HALFWORD;
+                        default: o_Memory_LS_Type    <= LS_WORD;
+                      endcase
+                    end
+                    READ_SUBMITTING, READ_AWAITING: begin
+                      // Don't issue any more commands while waiting
+                      o_Memory_LS_Address <= 0;
+                      o_Memory_LS_Type    <= LS_TYPE_NONE;
+                    end
+                    READ_SUCCESS: begin
+                      o_Memory_LS_Address <= 0;
+                      o_Memory_LS_Type    <= LS_TYPE_NONE;
+                      case (r_Bytes_Remaining & 0'b11)
+                        1: begin
+                          output_buffer[output_buffer_head] <= i_Memory_Data_Out[7:0];
+                          output_buffer_head <= output_buffer_head + 1;
+                          r_Bytes_Remaining <= r_Bytes_Remaining - 1;
+                          r_Memory_Address   <= r_Memory_Address + 1;
+                        end
+                        2: begin
+                          output_buffer[output_buffer_head] <= i_Memory_Data_Out[7:0];
+                          output_buffer[output_buffer_head+1] <= i_Memory_Data_Out[15:8];
+                          output_buffer_head <= output_buffer_head + 2;
+                          r_Bytes_Remaining <= r_Bytes_Remaining - 2;
+                          r_Memory_Address   <= r_Memory_Address + 2;
+                        end
+                        default: begin
+                          output_buffer[output_buffer_head] <= i_Memory_Data_Out[7:0];
+                          output_buffer[output_buffer_head+1] <= i_Memory_Data_Out[15:8];
+                          output_buffer[output_buffer_head+2] <= i_Memory_Data_Out[23:16];
+                          output_buffer[output_buffer_head+3] <= i_Memory_Data_Out[31:24];
+                          output_buffer_head <= output_buffer_head + 4;
+                          r_Bytes_Remaining <= r_Bytes_Remaining - 4;
+                          r_Memory_Address   <= r_Memory_Address + 4;
+                        end
+                      endcase
+                    end
+                    default: begin
+                      // Invald memory state for read
+                      output_buffer[output_buffer_head] <= MEMORY_READ_ERROR_STRING[7:0];
+                      output_buffer[output_buffer_head+1] <= MEMORY_READ_ERROR_STRING[15:8];
+                      output_buffer[output_buffer_head+2] <= MEMORY_READ_ERROR_STRING[23:16];
+                      output_buffer[output_buffer_head+3] <= MEMORY_READ_ERROR_STRING[31:24];
+                      output_buffer_head <= output_buffer_head + 4;
+                      o_Memory_LS_Address <= 0;
+                      o_Memory_LS_Type    <= LS_TYPE_NONE;
+                    end
+                  end
+              end
+              if(input_buffer_head == 8 && r_Bytes_Remaining == 0) begin
+                o_Memory_LS_Enable <= 0;
+                o_Memory_LS_Type <= LS_TYPE_NONE;
+                r_State <= s_IDLE;
+              end
+            end
+            op_WRITE_MEMORY: begin
+              // Receive 4 bytes of address
+              // Then 2 bytes for length of data to write
+              // Then the data
+              r_State <= s_IDLE;
             end
             default: begin
               r_State <= s_IDLE;

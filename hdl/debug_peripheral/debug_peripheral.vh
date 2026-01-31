@@ -15,7 +15,12 @@ localparam op_READ_PC = 8'h06;
 localparam op_WRITE_PC = 8'h07;
 localparam op_READ_REGISTER = 8'h08;
 localparam op_WRITE_REGISTER = 8'h09;
+localparam op_READ_MEMORY = 8'h0A;
+localparam op_WRITE_MEMORY = 8'h0B;
 
+
+localparam MEMORY_READ_ERROR_STRING = 32'hB00B1E55;
+localparam MEMORY_WRITE_ERROR_STRING = 32'hABADBABE;
 localparam PING_RESPONSE_BYTE = 8'hAA;
 
 `endif  // DEBUG_PERIPHERAL_VH

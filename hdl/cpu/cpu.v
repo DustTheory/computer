@@ -49,12 +49,21 @@ module cpu (
 
   // Debug peripheral wires
   wire w_Debug_Reg_Read_Enable;
-  wire [4:0] w_Debug_Reg_Read_Addr;
+  wire [REG_ADDR_WIDTH-1:0] w_Debug_Reg_Read_Addr;
+
   wire w_Debug_Reg_Write_Enable;
-  wire [4:0] w_Debug_Reg_Write_Addr;
-  wire [31:0] w_Debug_Reg_Write_Data;
+  wire [REG_ADDR_WIDTH-1:0] w_Debug_Reg_Write_Addr;
+  wire [XLEN-1:0] w_Debug_Reg_Write_Data;
+
   wire w_Debug_Write_PC_Enable;
-  wire [31:0] w_Debug_Write_PC_Data;
+  wire [XLEN-1:0] w_Debug_Write_PC_Data;
+
+  wire w_Debug_Memory_LS_Enable;
+  wire [LS_SEL_WIDTH:0] w_Debug_Memory_LS_Type;
+  wire w_Debug_Memory_LS_Write_Enable;
+  wire [XLEN-1:0] w_Debug_Memory_LS_Address;
+  wire [XLEN-1:0] w_Debug_Memory_LS_Data;
+
   wire w_Debug_Reset;
   wire w_Debug_Stall;
 
@@ -259,15 +268,20 @@ module cpu (
   wire w_Stall_S1 = !i_Init_Calib_Complete || (r_S2_Valid && (w_S2_Is_Load || w_S2_Is_Store) && !(w_Mem_Read_Done || w_Mem_Write_Done));
   wire w_Pipeline_Flushed = !w_Instruction_Valid && !r_S2_Valid && !r_S3_Valid;
 
+  wire [LS_SEL_WIDTH:0] w_Memory_Load_Store_type = w_Debug_Memory_LS_Enable ? w_Debug_Memory_LS_Type : r_S2_Load_Store_Type;
+  wire w_Memory_Write_Enable = w_Debug_Memory_LS_Enable ? w_Debug_Memory_LS_Write_Enable : r_S2_Mem_Write_Enable;
+  wire [XLEN-1:0] w_Memory_Addr = w_Debug_Memory_LS_Enable ? w_Debug_Memory_LS_Address : r_S2_Alu_Result;
+  wire [XLEN-1:0] w_Memory_Data = w_Debug_Memory_LS_Enable ? w_Debug_Memory_LS_Data : r_S2_Store_Data;
+  
   // Memory interface driven from S2
   memory_axi mem (
       .i_Reset(w_Reset),
       .i_Clock(i_Clock),
       .i_Enable(i_Init_Calib_Complete),
-      .i_Load_Store_Type(r_S2_Load_Store_Type),
-      .i_Write_Enable(r_S2_Mem_Write_Enable),
-      .i_Addr(r_S2_Alu_Result),
-      .i_Data(r_S2_Store_Data),
+      .i_Load_Store_Type(w_Memory_Load_Store_type),
+      .i_Write_Enable(w_Memory_Write_Enable),
+      .i_Addr(w_Memory_Addr),
+      .i_Data(w_Memory_Data),
       .o_Data(w_Dmem_Data),
       .o_State(w_Memory_State),
       .s_axil_araddr(s_data_memory_axil_araddr),
@@ -394,7 +408,15 @@ module cpu (
       .o_Reg_Write_Data(w_Debug_Reg_Write_Data),
 
       .o_Write_PC_Enable(w_Debug_Write_PC_Enable),
-      .o_Write_PC_Data(w_Debug_Write_PC_Data)
+      .o_Write_PC_Data(w_Debug_Write_PC_Data),
+
+      .o_Memory_LS_Enable(w_Debug_Memory_LS_Enable),
+      .o_Memory_LS_Type(w_Debug_Memory_LS_Type),
+      .o_Memory_LS_Write_Enable(w_Debug_Memory_LS_Write_Enable),
+      .o_Memory_LS_Address(w_Debug_Memory_LS_Address),
+      .o_Memory_LS_Data(w_Debug_Memory_LS_Data),
+      .i_Memory_Data_Out(w_Dmem_Data),
+      .i_Memory_State(w_Memory_State) 
   );
 
 endmodule
