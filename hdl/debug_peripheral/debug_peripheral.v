@@ -241,7 +241,7 @@ module debug_peripheral (
                 input_buffer[input_buffer_head] <= w_Rx_Byte;
                 input_buffer_head <= input_buffer_head + 1;
               end
-              if(i_Pipeline_Flushed && input_buffer_head == 7) begin
+              if(i_Pipeline_Flushed && input_buffer_head == 6) begin
                 r_Memory_Address <= {
                   input_buffer[3], input_buffer[2], input_buffer[1], input_buffer[0]
                 };
@@ -252,10 +252,10 @@ module debug_peripheral (
                 case (i_Memory_State)
                     IDLE: begin
                       o_Memory_LS_Address <= r_Memory_Address;
-                      case(r_Bytes_Remaining & 0'b11)
-                        1: o_Memory_LS_Type    <= LS_BYTE;
-                        2: o_Memory_LS_Type    <= LS_HALFWORD;
-                        default: o_Memory_LS_Type    <= LS_WORD;
+                      case(r_Bytes_Remaining & 2'b11)
+                        1: o_Memory_LS_Type    <= LS_TYPE_LOAD_BYTE;
+                        2: o_Memory_LS_Type    <= LS_TYPE_LOAD_HALF;
+                        default: o_Memory_LS_Type    <= LS_TYPE_LOAD_WORD;
                       endcase
                     end
                     READ_SUBMITTING, READ_AWAITING: begin
@@ -266,7 +266,7 @@ module debug_peripheral (
                     READ_SUCCESS: begin
                       o_Memory_LS_Address <= 0;
                       o_Memory_LS_Type    <= LS_TYPE_NONE;
-                      case (r_Bytes_Remaining & 0'b11)
+                      case (r_Bytes_Remaining & 2'b11)
                         1: begin
                           output_buffer[output_buffer_head] <= i_Memory_Data_Out[7:0];
                           output_buffer_head <= output_buffer_head + 1;
@@ -301,9 +301,9 @@ module debug_peripheral (
                       o_Memory_LS_Address <= 0;
                       o_Memory_LS_Type    <= LS_TYPE_NONE;
                     end
-                  end
+                  endcase
               end
-              if(input_buffer_head == 8 && r_Bytes_Remaining == 0) begin
+              if(input_buffer_head == 7 && r_Bytes_Remaining == 0) begin
                 o_Memory_LS_Enable <= 0;
                 o_Memory_LS_Type <= LS_TYPE_NONE;
                 r_State <= s_IDLE;

@@ -161,6 +161,15 @@ async def uart_wait_for_byte(clock, i_tx_serial, o_tx_done):
 
     return received_byte
 
+async def wait_for_halt(dut, timeout_cycles=1000):
+    """Wait for the debug peripheral halt signal to be asserted."""
+    for i in range(timeout_cycles):
+        if dut.cpu.debug_peripheral.o_Halt_Cpu.value == 1:
+            return
+        await ClockCycles(dut.i_Clock, 1)
+    raise AssertionError(f"Halt not asserted after {timeout_cycles} cycles")
+
+
 async def wait_for_pipeline_flush(dut, timeout_cycles=1000):
     """
     Wait for CPU pipeline to flush (becomes empty).

@@ -71,7 +71,8 @@ CPU_INTEGRATION_TESTS_MODULE = "cpu.integration_tests.test_instruction_fetch, \
 		cpu.integration_tests.test_debug_read_pc, \
 		cpu.integration_tests.test_debug_read_register, \
 		cpu.integration_tests.test_debug_write_register, \
-		cpu.integration_tests.test_debug_write_pc"
+		cpu.integration_tests.test_debug_write_pc, \
+		cpu.integration_tests.test_debug_read_memory"
 
 VGA_UNIT_TESTS_TOPLEVEL = vga_unit_tests_harness
 VGA_UNIT_TESTS_MODULE = "vga.unit_tests.test_vga_comprehensive"

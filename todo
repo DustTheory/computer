@@ -1,0 +1,15 @@
+Write test for read memory op
+Write test for write memory op
+Fix up read memory op
+Write write memory op
+Test write memory on hardware
+
+Set up compile toolchain
+Prepare a hardware test suite
+
+Rewire my block diagram
+Investigate timing errors
+
+Compile a game
+
+
