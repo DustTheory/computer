@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add 8 hardware performance counters to the CPU, readable via a new `STATS_DUMP` debug command, with display in the Go debugger tool.
+**Goal:** Add 7 hardware performance counters to the CPU, appended to the existing `DUMP_STATE` response (34 bytes total instead of 2), with updated display in the Go debugger.
 
-**Architecture:** Counters live in `cpu.v` as plain registers, gated on `i_Init_Calib_Complete`. They are packed into a 256-bit bus and wired to `debug_peripheral` as a new input. The peripheral gets a new opcode `0x0A` that streams the 32 bytes back over UART. The Go debugger parses and displays them.
+**Architecture:** Counters live in `cpu.v` as plain registers, gated on `i_Init_Calib_Complete`. They are packed into a 256-bit bus passed to `debug_peripheral` as a new `i_Perf_Counters` input. The existing `op_DUMP_STATE` handler is extended to stream the 32 extra counter bytes after the existing 2 state bytes. The Go debugger's `CmdDumpState` handler is updated to expect 34 bytes and display both sections.
 
-**Tech Stack:** Verilog (SystemVerilog-compatible), Python/cocotb (tests), Go/bubbletea (debugger TUI)
+**Tech Stack:** Verilog, Python/cocotb, Go/bubbletea
 
 ---
 
@@ -14,67 +14,24 @@
 
 | File | Change |
 |------|--------|
-| `hdl/debug_peripheral/debug_peripheral.vh` | Add `op_STATS_DUMP = 8'h0A` |
-| `hdl/debug_peripheral/debug_peripheral.v` | Add `i_Perf_Counters [255:0]` input port; add `op_STATS_DUMP` handler |
-| `hdl/cpu/cpu.v` | Add 8 counter registers; wire packed bus; pass to `debug_peripheral` |
-| `tests/cpu/constants.py` | Add `DEBUG_OP_STATS_DUMP = 0x0A` |
-| `tests/cpu/integration_tests/test_perf_counters.py` | New: integration test for perf counters |
-| `tools/debugger/opcodes.go` | Add `op_STATS_DUMP OpCode = 0x0A` and its `String()` case |
-| `tools/debugger/commands.go` | Add `GetOpCode()` case for `CmdStatsDump`; mark `implemented: true` |
-| `tools/debugger/stats.go` | New: `executeStatsDump()` and `formatStats()` |
-| `tools/debugger/ui.go` | Wire `CmdStatsDump` into `executeCommand()` and `parseResponse()` |
+| `hdl/cpu/cpu.v` | Add 7 counter registers, packed bus `w_Perf_Counters[255:0]`, pass to `debug_peripheral` |
+| `hdl/debug_peripheral/debug_peripheral.v` | Add `i_Perf_Counters[255:0]` port; extend `op_DUMP_STATE` handler to 34 bytes |
+| `tests/cpu/integration_tests/test_debug_dump_state.py` | Extend: assert 34-byte response, verify perf fields |
+| `tools/debugger/ui.go` | Update `CmdDumpState` handler: parse 34 bytes, display perf section |
+| `tools/debugger/serial.go` | Update mock: `op_DUMP_STATE` returns 34-byte response |
 
 ---
 
-## Task 1: Add opcode to hardware header and constants
-
-**Files:**
-- Modify: `hdl/debug_peripheral/debug_peripheral.vh`
-- Modify: `tests/cpu/constants.py`
-
-- [ ] **Step 1: Add opcode to `debug_peripheral.vh`**
-
-In `hdl/debug_peripheral/debug_peripheral.vh`, add after the `op_WRITE_REGISTER` line:
-
-```verilog
-localparam op_STATS_DUMP = 8'h0A;
-```
-
-- [ ] **Step 2: Add opcode to Python constants**
-
-In `tests/cpu/constants.py`, add after `DEBUG_OP_WRITE_REGISTER = 0x09`:
-
-```python
-DEBUG_OP_STATS_DUMP = 0x0A
-```
-
-- [ ] **Step 3: Verify existing tests still pass**
-
-```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=integration
-```
-
-Expected: all existing integration tests pass (no behavioral change yet).
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add hdl/debug_peripheral/debug_peripheral.vh tests/cpu/constants.py
-git commit -m "feat: add op_STATS_DUMP opcode constant (0x0A)"
-```
-
----
-
-## Task 2: Add performance counters to `cpu.v`
+## Task 1: Add performance counters to `cpu.v`
 
 **Files:**
 - Modify: `hdl/cpu/cpu.v`
 
-All counter registers must be declared and incremented in `cpu.v`. The `w_S2_Is_Load` and `w_S2_Is_Store` wires already exist. `w_Stall_S1`, `w_Retire`, `w_Flush_Pipeline`, `r_Flushing_Pipeline`, `w_Instruction_Valid`, `w_Debug_Stall`, and `i_Init_Calib_Complete` are all already in scope.
+All needed signals are already in scope in `cpu.v`: `w_Stall_S1`, `w_S2_Is_Load`, `w_S2_Is_Store`, `w_Retire`, `r_Flushing_Pipeline`, `w_Instruction_Valid`, `w_Debug_Stall`, `i_Init_Calib_Complete`, `w_Reset`, `s_data_memory_axil_bvalid`, `s_data_memory_axil_bresp`.
 
 - [ ] **Step 1: Declare counter registers**
 
-Add after the `wire w_Retire = ...` line (around line 360):
+Add after the `wire w_Retire = w_Retire_Reg || w_Store_Commit;` line:
 
 ```verilog
   // Performance counters
@@ -89,36 +46,30 @@ Add after the `wire w_Retire = ...` line (around line 360):
 
 - [ ] **Step 2: Add counter always block**
 
-Add a new `always @(posedge i_Clock)` block after the register declarations (before the `/*---DEBUG PERIPHERAL---*/` section):
+Add immediately after the register declarations:
 
 ```verilog
   always @(posedge i_Clock) begin
     if (w_Reset) begin
-      r_Perf_Cycles                <= 64'd0;
-      r_Perf_Instructions_Retired  <= 32'd0;
-      r_Perf_Stall_Load            <= 32'd0;
-      r_Perf_Stall_Store           <= 32'd0;
-      r_Perf_Stall_Fetch           <= 32'd0;
-      r_Perf_Flush_Cycles          <= 32'd0;
-      r_Perf_Mem_Errors            <= 32'd0;
+      r_Perf_Cycles               <= 64'd0;
+      r_Perf_Instructions_Retired <= 32'd0;
+      r_Perf_Stall_Load           <= 32'd0;
+      r_Perf_Stall_Store          <= 32'd0;
+      r_Perf_Stall_Fetch          <= 32'd0;
+      r_Perf_Flush_Cycles         <= 32'd0;
+      r_Perf_Mem_Errors           <= 32'd0;
     end else if (i_Init_Calib_Complete) begin
       r_Perf_Cycles <= r_Perf_Cycles + 1;
-
       if (w_Retire)
         r_Perf_Instructions_Retired <= r_Perf_Instructions_Retired + 1;
-
       if (w_Stall_S1 && w_S2_Is_Load)
         r_Perf_Stall_Load <= r_Perf_Stall_Load + 1;
-
       if (w_Stall_S1 && w_S2_Is_Store)
         r_Perf_Stall_Store <= r_Perf_Stall_Store + 1;
-
       if (!w_Instruction_Valid && !r_Flushing_Pipeline && !w_Debug_Stall)
         r_Perf_Stall_Fetch <= r_Perf_Stall_Fetch + 1;
-
       if (r_Flushing_Pipeline)
         r_Perf_Flush_Cycles <= r_Perf_Flush_Cycles + 1;
-
       if (s_data_memory_axil_bvalid && s_data_memory_axil_bresp != 2'b00)
         r_Perf_Mem_Errors <= r_Perf_Mem_Errors + 1;
     end
@@ -142,19 +93,19 @@ Add after the always block:
 
 - [ ] **Step 4: Pass bus to `debug_peripheral` instantiation**
 
-In the `debug_peripheral debug_peripheral (...)` instantiation (around line 376), add the new port connection:
+In the `debug_peripheral debug_peripheral (...)` instantiation, add after `.i_Init_Calib_Complete(i_Init_Calib_Complete),`:
 
 ```verilog
       .i_Perf_Counters(w_Perf_Counters),
 ```
 
-- [ ] **Step 5: Verify existing tests still pass**
+- [ ] **Step 5: Verify existing tests pass**
 
 ```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=integration
+cd /home/emma/gpu/tests && source test_env/bin/activate && make TEST_TYPE=integration
 ```
 
-Expected: all existing integration tests pass (counters increment but nothing reads them yet).
+Expected: all pass (counters increment silently, nothing reads them yet).
 
 - [ ] **Step 6: Commit**
 
@@ -165,12 +116,31 @@ git commit -m "feat: add performance counter registers to cpu.v"
 
 ---
 
-## Task 3: Add `STATS_DUMP` handler to `debug_peripheral`
+## Task 2: Extend `op_DUMP_STATE` handler in `debug_peripheral`
 
 **Files:**
 - Modify: `hdl/debug_peripheral/debug_peripheral.v`
 
-The handler must send 32 bytes (bytes 0–31 of `i_Perf_Counters`) over UART, one byte per `r_Exec_Counter` tick, then transition to `s_IDLE`. The existing `op_READ_PC` handler (lines 139–160) uses the same pattern and is the reference.
+Currently `op_DUMP_STATE` streams 2 bytes (r_Exec_Counter 0 and 1) then goes to `s_IDLE` at `default`. We extend it to stream 32 more bytes (counter 2–33) before going idle.
+
+The existing handler:
+```verilog
+op_DUMP_STATE: begin
+  case (r_Exec_Counter)
+    0: begin
+      output_buffer[output_buffer_head] <= { i_Mem_AXI_State, i_Pipeline_Flushed, i_Stall_S1, i_Enable_Instruction_Fetch, i_S2_Valid, i_S3_Valid };
+      output_buffer_head <= output_buffer_head + 1;
+    end
+    1: begin
+      output_buffer[output_buffer_head] <= { i_Instr_Mem_AXI_State, i_Init_Calib_Complete, 5'b0 };
+      output_buffer_head <= output_buffer_head + 1;
+    end
+    default: begin
+      r_State <= s_IDLE;
+    end
+  endcase
+end
+```
 
 - [ ] **Step 1: Add `i_Perf_Counters` input port**
 
@@ -180,403 +150,175 @@ In the module port list, add after `o_Write_PC_Data`:
     input [255:0] i_Perf_Counters
 ```
 
-- [ ] **Step 2: Add `op_STATS_DUMP` case**
+- [ ] **Step 2: Replace `op_DUMP_STATE` case**
 
-In the `s_DECODE_AND_EXECUTE` case statement, add after the `op_WRITE_REGISTER` case and before `default`:
+Replace the entire `op_DUMP_STATE` case with:
 
 ```verilog
-            op_STATS_DUMP: begin
-              if (r_Exec_Counter < 32) begin
-                output_buffer[output_buffer_head] <= i_Perf_Counters[r_Exec_Counter*8 +: 8];
-                output_buffer_head <= output_buffer_head + 1;
-              end else begin
-                r_State <= s_IDLE;
-              end
+            op_DUMP_STATE: begin
+              case (r_Exec_Counter)
+                0: begin
+                  output_buffer[output_buffer_head] <= {
+                    i_Mem_AXI_State,
+                    i_Pipeline_Flushed,
+                    i_Stall_S1,
+                    i_Enable_Instruction_Fetch,
+                    i_S2_Valid,
+                    i_S3_Valid
+                  };
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                1: begin
+                  output_buffer[output_buffer_head] <= {
+                    i_Instr_Mem_AXI_State,
+                    i_Init_Calib_Complete,
+                    5'b0
+                  };
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                default: begin
+                  if (r_Exec_Counter < 34) begin
+                    output_buffer[output_buffer_head] <= i_Perf_Counters[(r_Exec_Counter - 2) * 8 +: 8];
+                    output_buffer_head <= output_buffer_head + 1;
+                  end else begin
+                    r_State <= s_IDLE;
+                  end
+                end
+              endcase
             end
 ```
 
-- [ ] **Step 3: Verify existing tests still pass**
+- [ ] **Step 3: Verify existing tests pass**
 
 ```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=integration
+cd /home/emma/gpu/tests && source test_env/bin/activate && make TEST_TYPE=integration
 ```
 
-Expected: all passing.
+Expected: all pass. Note: `test_debug_dump_state.py` may now fail because it only reads 2 bytes — that will be fixed in Task 3.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add hdl/debug_peripheral/debug_peripheral.v
-git commit -m "feat: add op_STATS_DUMP handler to debug_peripheral"
+git commit -m "feat: extend DUMP_STATE to append 32 perf counter bytes"
 ```
 
 ---
 
-## Task 4: Write integration test for performance counters
+## Task 3: Extend `test_debug_dump_state.py`
 
 **Files:**
-- Create: `tests/cpu/integration_tests/test_perf_counters.py`
+- Modify: `tests/cpu/integration_tests/test_debug_dump_state.py`
 
-This test halts the CPU, fires `STATS_DUMP`, and verifies the 32-byte response is received. It then runs a known number of instructions and checks that `instructions_retired` increments correctly.
+The existing test sends `DUMP_STATE` and reads 2 bytes via `uart_wait_for_byte`. It needs to read 34 bytes and verify the perf section is present and sane.
 
-The test harness sets `i_Init_Calib_Complete = 1'b1` (see `cpu_integration_tests_harness.v` line 36), so counters will be active.
+Read the current test first: `tests/cpu/integration_tests/test_debug_dump_state.py`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Read the existing test**
 
-Create `tests/cpu/integration_tests/test_perf_counters.py`:
+```bash
+cat /home/emma/gpu/tests/cpu/integration_tests/test_debug_dump_state.py
+```
+
+- [ ] **Step 2: Add perf counter assertions to existing test**
+
+After the existing 2-byte receive and assertions, add reading 32 more bytes and basic sanity checks. Add these imports at the top if not already present:
 
 ```python
-import cocotb
-from cocotb.triggers import ClockCycles, RisingEdge
-from cocotb.clock import Clock
-
-from cpu.utils import (
-    gen_r_type_instruction,
-    write_word_to_mem,
-    uart_send_byte,
-    wait_for_pipeline_flush,
-)
-from cpu.constants import (
-    FUNC3_ALU_ADD_SUB,
-    RAM_START_ADDR,
-    DEBUG_OP_HALT,
-    DEBUG_OP_UNHALT,
-    DEBUG_OP_STATS_DUMP,
-)
-
-wait_ns = 1
-STATS_RESPONSE_BYTES = 32
-
-
-async def read_stats_dump(dut, clock):
-    """Send STATS_DUMP and collect 32 bytes. Returns list of 32 ints."""
-    await uart_send_byte(clock, dut.cpu.i_Uart_Tx_In,
-                         dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV,
-                         DEBUG_OP_STATS_DUMP)
-    # Wait enough cycles for 32 bytes at 706 clocks/byte + margin
-    await ClockCycles(clock, 706 * STATS_RESPONSE_BYTES + 500)
-
-    # Collect output bytes from uart_transmitter output register
-    # Read from output_buffer in debug_peripheral (simulation only)
-    raw = []
-    for i in range(STATS_RESPONSE_BYTES):
-        raw.append(int(dut.cpu.debug_peripheral.output_buffer[i].value))
-    return raw
-
-
-def parse_u64_le(raw, offset):
-    val = 0
-    for i in range(8):
-        val |= raw[offset + i] << (i * 8)
-    return val
-
-
-def parse_u32_le(raw, offset):
-    val = 0
-    for i in range(4):
-        val |= raw[offset + i] << (i * 8)
-    return val
-
-
-@cocotb.test()
-async def test_stats_dump_returns_32_bytes(dut):
-    """STATS_DUMP handler sends exactly 32 bytes"""
-    clock = Clock(dut.i_Clock, wait_ns, "ns")
-    cocotb.start_soon(clock.start())
-
-    dut.i_Reset.value = 1
-    await ClockCycles(dut.i_Clock, 2)
-    dut.i_Reset.value = 0
-    await ClockCycles(dut.i_Clock, 2)
-
-    await uart_send_byte(clock, dut.cpu.i_Uart_Tx_In,
-                         dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV,
-                         DEBUG_OP_HALT)
-    await wait_for_pipeline_flush(dut)
-
-    raw = await read_stats_dump(dut, dut.i_Clock)
-    assert len(raw) == STATS_RESPONSE_BYTES, \
-        f"Expected 32 bytes, got {len(raw)}"
-
-
-@cocotb.test()
-async def test_instructions_retired_counts_correctly(dut):
-    """instructions_retired increments once per retired instruction"""
-    clock = Clock(dut.i_Clock, wait_ns, "ns")
-    cocotb.start_soon(clock.start())
-
-    dut.i_Reset.value = 1
-    await ClockCycles(dut.i_Clock, 2)
-    dut.i_Reset.value = 0
-
-    # Read baseline retired count
-    await uart_send_byte(clock, dut.cpu.i_Uart_Tx_In,
-                         dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV,
-                         DEBUG_OP_HALT)
-    await wait_for_pipeline_flush(dut)
-    raw_before = await read_stats_dump(dut, dut.i_Clock)
-    retired_before = parse_u32_le(raw_before, 8)
-
-    # Write 3 ADD instructions followed by NOPs and run them
-    start_address = RAM_START_ADDR
-    add_instr = gen_r_type_instruction(3, FUNC3_ALU_ADD_SUB, 1, 2, 0)
-    nop_instr = 0x00000013  # ADDI x0, x0, 0
-    for i in range(3):
-        write_word_to_mem(dut.instruction_ram.mem, start_address + i * 4, add_instr)
-    for i in range(6):
-        write_word_to_mem(dut.instruction_ram.mem, start_address + (3 + i) * 4, nop_instr)
-    dut.cpu.r_PC.value = start_address
-
-    await uart_send_byte(clock, dut.cpu.i_Uart_Tx_In,
-                         dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV,
-                         DEBUG_OP_UNHALT)
-    # Run long enough for 3 instructions + pipeline drain
-    await ClockCycles(dut.i_Clock, 30)
-
-    await uart_send_byte(clock, dut.cpu.i_Uart_Tx_In,
-                         dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV,
-                         DEBUG_OP_HALT)
-    await wait_for_pipeline_flush(dut)
-
-    raw_after = await read_stats_dump(dut, dut.i_Clock)
-    retired_after = parse_u32_le(raw_after, 8)
-
-    assert retired_after >= retired_before + 3, \
-        f"Expected at least 3 more retired instructions, got {retired_after - retired_before}"
-
-
-@cocotb.test()
-async def test_cycles_advances(dut):
-    """cycles counter increases over time"""
-    clock = Clock(dut.i_Clock, wait_ns, "ns")
-    cocotb.start_soon(clock.start())
-
-    dut.i_Reset.value = 1
-    await ClockCycles(dut.i_Clock, 2)
-    dut.i_Reset.value = 0
-
-    await uart_send_byte(clock, dut.cpu.i_Uart_Tx_In,
-                         dut.cpu.debug_peripheral.uart_receiver.o_Rx_DV,
-                         DEBUG_OP_HALT)
-    await wait_for_pipeline_flush(dut)
-
-    raw1 = await read_stats_dump(dut, dut.i_Clock)
-    cycles1 = parse_u64_le(raw1, 0)
-
-    await ClockCycles(dut.i_Clock, 100)
-
-    raw2 = await read_stats_dump(dut, dut.i_Clock)
-    cycles2 = parse_u64_le(raw2, 0)
-
-    assert cycles2 > cycles1, \
-        f"cycles did not advance: before={cycles1}, after={cycles2}"
+import struct
 ```
 
-- [ ] **Step 2: Run test to verify it fails (handler not wired yet)**
+After the existing `byte0`/`byte1` assertions, append:
+
+```python
+    # Read 32 perf counter bytes
+    perf_bytes = []
+    for _ in range(32):
+        b = await uart_wait_for_byte(
+            dut.i_Clock,
+            dut.cpu.o_Uart_Rx_Out,
+            dut.cpu.debug_peripheral.uart_transmitter.o_Tx_Done
+        )
+        perf_bytes.append(b)
+
+    cycles               = struct.unpack_from('<Q', bytes(perf_bytes[0:8]))[0]
+    instructions_retired = struct.unpack_from('<I', bytes(perf_bytes[8:12]))[0]
+    stall_cycles_load    = struct.unpack_from('<I', bytes(perf_bytes[12:16]))[0]
+    stall_cycles_store   = struct.unpack_from('<I', bytes(perf_bytes[16:20]))[0]
+    stall_cycles_fetch   = struct.unpack_from('<I', bytes(perf_bytes[20:24]))[0]
+    flush_cycles         = struct.unpack_from('<I', bytes(perf_bytes[24:28]))[0]
+    mem_errors           = struct.unpack_from('<I', bytes(perf_bytes[28:32]))[0]
+
+    # i_Init_Calib_Complete = 1 in harness so cycles must be > 0
+    assert cycles > 0, f"cycles should be > 0, got {cycles}"
+    # No memory ops have run, errors should be 0
+    assert mem_errors == 0, f"mem_errors should be 0, got {mem_errors}"
+    # Sanity: stall counters don't exceed cycles
+    assert stall_cycles_load <= cycles, "stall_cycles_load > cycles"
+    assert stall_cycles_store <= cycles, "stall_cycles_store > cycles"
+    assert stall_cycles_fetch <= cycles, "stall_cycles_fetch > cycles"
+    assert flush_cycles <= cycles, "flush_cycles > cycles"
+```
+
+- [ ] **Step 3: Run the updated test**
 
 ```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=integration TEST_FILE=test_perf_counters
+cd /home/emma/gpu/tests && source test_env/bin/activate && make TEST_TYPE=integration TEST_FILE=test_debug_dump_state
 ```
 
-Expected: FAIL — `DEBUG_OP_STATS_DUMP` not yet in constants, or response bytes are wrong.
+Expected: PASS.
 
-- [ ] **Step 3: Run tests after full hardware implementation (Tasks 2 & 3 complete)**
+- [ ] **Step 4: Run full test suite**
 
 ```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=integration TEST_FILE=test_perf_counters
+cd /home/emma/gpu/tests && source test_env/bin/activate && make TEST_TYPE=all
 ```
 
-Expected: all 3 tests PASS.
-
-- [ ] **Step 4: Run full test suite to check for regressions**
-
-```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=all
-```
-
-Expected: all tests pass.
+Expected: all pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/cpu/integration_tests/test_perf_counters.py
-git commit -m "test: add integration tests for perf counters"
+git add tests/cpu/integration_tests/test_debug_dump_state.py
+git commit -m "test: extend test_debug_dump_state to verify perf counter bytes"
 ```
 
 ---
 
-## Task 5: Wire `CmdStatsDump` in Go debugger
+## Task 4: Update Go debugger
 
 **Files:**
-- Modify: `tools/debugger/opcodes.go`
-- Modify: `tools/debugger/commands.go`
-- Create: `tools/debugger/stats.go`
 - Modify: `tools/debugger/ui.go`
+- Modify: `tools/debugger/serial.go`
 
-- [ ] **Step 1: Add opcode to `opcodes.go`**
+The `CmdDumpState` handler in `ui.go` currently reads 2 bytes. It must now accept 34 bytes and display the perf section. The mock in `serial.go` must return 34 bytes.
 
-Add to the const block after `op_WRITE_REGISTER`:
+- [ ] **Step 1: Update mock in `serial.go`**
 
-```go
-op_STATS_DUMP OpCode = 0x0A
-```
-
-Add to the `String()` switch:
+In `SendCommand`, find the `time.AfterFunc` mock block:
 
 ```go
-case op_STATS_DUMP:
-    return "STATS_DUMP"
+time.AfterFunc(50*time.Millisecond, func() {
+    mockData := []byte{byte(opcode), 0xAA, 0x55}
+    sm.handleResponse(mockData)
+})
 ```
 
-- [ ] **Step 2: Wire `CmdStatsDump` in `commands.go`**
-
-In `GetOpCode()`, add a case before `default`:
-
-```go
-case CmdStatsDump:
-    return op_STATS_DUMP, true
-```
-
-Change the `CmdStatsDump` entry in `commands` map from `implemented: false` to `implemented: true`:
-
-```go
-CmdStatsDump: {"Read Stats", "Read CPU statistics", true},
-```
-
-- [ ] **Step 3: Create `tools/debugger/stats.go`**
-
-```go
-package main
-
-import (
-	"encoding/binary"
-	"fmt"
-	"time"
-)
-
-type PerfCounters struct {
-	Cycles               uint64
-	InstructionsRetired  uint32
-	StallCyclesLoad      uint32
-	StallCyclesStore     uint32
-	StallCyclesFetch     uint32
-	FlushCycles          uint32
-	MemErrors            uint32
-}
-
-func parseStats(data []byte) (PerfCounters, error) {
-	if len(data) < 32 {
-		return PerfCounters{}, fmt.Errorf("expected 32 bytes, got %d", len(data))
-	}
-	return PerfCounters{
-		Cycles:              binary.LittleEndian.Uint64(data[0:8]),
-		InstructionsRetired: binary.LittleEndian.Uint32(data[8:12]),
-		StallCyclesLoad:     binary.LittleEndian.Uint32(data[12:16]),
-		StallCyclesStore:    binary.LittleEndian.Uint32(data[16:20]),
-		StallCyclesFetch:    binary.LittleEndian.Uint32(data[20:24]),
-		FlushCycles:         binary.LittleEndian.Uint32(data[24:28]),
-		MemErrors:           binary.LittleEndian.Uint32(data[28:32]),
-	}, nil
-}
-
-func formatStats(c PerfCounters) string {
-	var cpi float64
-	if c.InstructionsRetired > 0 {
-		cpi = float64(c.Cycles) / float64(c.InstructionsRetired)
-	}
-
-	totalStall := uint64(c.StallCyclesLoad) + uint64(c.StallCyclesStore) +
-		uint64(c.StallCyclesFetch) + uint64(c.FlushCycles)
-
-	var stallPct float64
-	if c.Cycles > 0 {
-		stallPct = float64(totalStall) / float64(c.Cycles) * 100
-	}
-
-	return fmt.Sprintf(
-		"CPU Performance Stats\n"+
-			"─────────────────────────────────\n"+
-			"  Cycles:              %d\n"+
-			"  Instructions retired:%d\n"+
-			"  CPI:                 %.2f\n"+
-			"─────────────────────────────────\n"+
-			"  Stall cycles (load): %d\n"+
-			"  Stall cycles (store):%d\n"+
-			"  Stall cycles (fetch):%d\n"+
-			"  Flush cycles:        %d\n"+
-			"  Total stall %%:       %.1f%%\n"+
-			"─────────────────────────────────\n"+
-			"  Memory errors:       %d\n",
-		c.Cycles, c.InstructionsRetired, cpi,
-		c.StallCyclesLoad, c.StallCyclesStore, c.StallCyclesFetch, c.FlushCycles,
-		stallPct, c.MemErrors,
-	)
-}
-
-func (m model) executeStatsDump() tea.Cmd {
-	return func() tea.Msg {
-		opcode, _ := CmdStatsDump.GetOpCode()
-		err := m.serialMgr.SendCommand(opcode)
-		if err != nil {
-			return commandCompleteMsg{
-				success: false,
-				message: fmt.Sprintf("Failed to send STATS_DUMP: %v", err),
-			}
-		}
-
-		time.Sleep(500 * time.Millisecond)
-
-		responses := m.serialMgr.GetResponses()
-		if len(responses) == 0 {
-			return commandCompleteMsg{success: false, message: "No response from CPU"}
-		}
-
-		last := responses[len(responses)-1]
-		counters, err := parseStats(last.Data)
-		if err != nil {
-			return commandCompleteMsg{
-				success: false,
-				message: fmt.Sprintf("Failed to parse stats: %v", err),
-			}
-		}
-
-		return commandCompleteMsg{
-			success: true,
-			message: formatStats(counters),
-			cmd:     CmdStatsDump,
-		}
-	}
-}
-```
-
-Note: `stats.go` is in `package main` so it needs the `tea` import. Add `tea "github.com/charmbracelet/bubbletea"` to the imports in `stats.go`.
-
-- [ ] **Step 4: Wire into `ui.go` `executeCommand()`**
-
-In `executeCommand()` in `ui.go`, add a case before the final `time.Sleep` / default return:
-
-```go
-if cmd == CmdStatsDump {
-    return m.executeStatsDump()
-}
-```
-
-Add this block right after the `if cmd == CmdReadPC { ... }` block (around line 429).
-
-- [ ] **Step 5: Add mock response for `op_STATS_DUMP` in `serial.go`**
-
-In `SendCommand` mock branch in `serial.go`, the current code sends `[]byte{byte(opcode), 0xAA, 0x55}` for all commands. The stats response is 32 bytes. Update the mock to handle `op_STATS_DUMP`:
-
-Find the `time.AfterFunc` block in `SendCommand` and replace it with:
+Replace with:
 
 ```go
 time.AfterFunc(50*time.Millisecond, func() {
     var mockData []byte
-    if OpCode(opcode) == op_STATS_DUMP {
-        mockData = make([]byte, 32)
-        // cycles = 1000000, instructions = 500000, all others 0
-        binary.LittleEndian.PutUint64(mockData[0:8], 1000000)
-        binary.LittleEndian.PutUint32(mockData[8:12], 500000)
+    if opcode == op_DUMP_STATE {
+        mockData = make([]byte, 34)
+        // byte0: all flags clear, data mem IDLE (state=0)
+        mockData[0] = 0x00
+        // byte1: instr mem IDLE, init_calib_complete=1
+        mockData[1] = 0x20
+        // perf counters (bytes 2-33): cycles=1000000 LE, instructions=500000 LE, rest 0
+        mockData[2] = 0x40; mockData[3] = 0x42; mockData[4] = 0x0F; mockData[5] = 0x00
+        mockData[6] = 0x00; mockData[7] = 0x00; mockData[8] = 0x00; mockData[9] = 0x00
+        mockData[10] = 0x20; mockData[11] = 0xA1; mockData[12] = 0x07; mockData[13] = 0x00
     } else {
         mockData = []byte{byte(opcode), 0xAA, 0x55}
     }
@@ -584,39 +326,133 @@ time.AfterFunc(50*time.Millisecond, func() {
 })
 ```
 
-Add `"encoding/binary"` to the imports in `serial.go`.
+Note: `0x000F4240` = 1,000,000 and `0x0007A120` = 500,000 in little-endian.
 
-- [ ] **Step 6: Build and verify it compiles**
+- [ ] **Step 2: Update `CmdDumpState` handler in `ui.go`**
+
+Find the `if cmd == CmdDumpState {` block. Replace it with:
+
+```go
+		// For DUMP_STATE, wait for 34-byte response (2 state bytes + 32 perf counter bytes)
+		if cmd == CmdDumpState {
+			time.Sleep(500 * time.Millisecond)
+
+			responses := m.serialMgr.GetResponses()
+			if len(responses) > 0 {
+				lastResp := responses[len(responses)-1]
+				if len(lastResp.Data) >= 34 {
+					b0 := lastResp.Data[0]
+					b1 := lastResp.Data[1]
+					perf := lastResp.Data[2:34]
+
+					dataMemStateNames := []string{
+						"IDLE", "READ_SUBMITTING", "READ_AWAITING", "READ_SUCCESS",
+						"WRITE_SUBMITTING", "WRITE_AWAITING", "WRITE_SUCCESS", "MEMORY_ERROR",
+					}
+					instrMemStateNames := []string{
+						"IDLE", "READ_SUBMITTING", "READ_AWAITING", "READ_SUCCESS",
+					}
+					dataMemState := (b0 >> 5) & 0x7
+					pipelineFlushed := (b0 >> 4) & 0x1
+					stallS1 := (b0 >> 3) & 0x1
+					enableFetch := (b0 >> 2) & 0x1
+					s2Valid := (b0 >> 1) & 0x1
+					s3Valid := b0 & 0x1
+					instrMemState := (b1 >> 6) & 0x3
+					initCalibComplete := (b1 >> 5) & 0x1
+
+					cycles := uint64(perf[0]) | uint64(perf[1])<<8 | uint64(perf[2])<<16 | uint64(perf[3])<<24 |
+						uint64(perf[4])<<32 | uint64(perf[5])<<40 | uint64(perf[6])<<48 | uint64(perf[7])<<56
+					retired := uint32(perf[8]) | uint32(perf[9])<<8 | uint32(perf[10])<<16 | uint32(perf[11])<<24
+					stallLoad := uint32(perf[12]) | uint32(perf[13])<<8 | uint32(perf[14])<<16 | uint32(perf[15])<<24
+					stallStore := uint32(perf[16]) | uint32(perf[17])<<8 | uint32(perf[18])<<16 | uint32(perf[19])<<24
+					stallFetch := uint32(perf[20]) | uint32(perf[21])<<8 | uint32(perf[22])<<16 | uint32(perf[23])<<24
+					flushCycles := uint32(perf[24]) | uint32(perf[25])<<8 | uint32(perf[26])<<16 | uint32(perf[27])<<24
+					memErrors := uint32(perf[28]) | uint32(perf[29])<<8 | uint32(perf[30])<<16 | uint32(perf[31])<<24
+
+					var cpi float64
+					if retired > 0 {
+						cpi = float64(cycles) / float64(retired)
+					}
+					totalStall := uint64(stallLoad) + uint64(stallStore) + uint64(stallFetch) + uint64(flushCycles)
+					var stallPct float64
+					if cycles > 0 {
+						stallPct = float64(totalStall) / float64(cycles) * 100
+					}
+
+					msg := fmt.Sprintf(
+						"✓ State dump:\n"+
+							"  data_mem_axi:      %s\n"+
+							"  instr_mem_axi:     %s\n"+
+							"  init_calib:        %d\n"+
+							"  pipeline_flushed:  %d\n"+
+							"  stall_s1:          %d\n"+
+							"  enable_fetch:      %d\n"+
+							"  s2_valid:          %d\n"+
+							"  s3_valid:          %d\n"+
+							"─────────────────────────────────\n"+
+							"  cycles:            %d\n"+
+							"  instructions:      %d\n"+
+							"  CPI:               %.2f\n"+
+							"  stall%% (load):     %.1f%%\n"+
+							"  stall%% (store):    %.1f%%\n"+
+							"  stall%% (fetch):    %.1f%%\n"+
+							"  flush%%:            %.1f%%\n"+
+							"  total stall%%:      %.1f%%\n"+
+							"  mem_errors:        %d",
+						dataMemStateNames[dataMemState], instrMemStateNames[instrMemState],
+						initCalibComplete, pipelineFlushed, stallS1, enableFetch, s2Valid, s3Valid,
+						cycles, retired, cpi,
+						float64(stallLoad)/float64(cycles)*100,
+						float64(stallStore)/float64(cycles)*100,
+						float64(stallFetch)/float64(cycles)*100,
+						float64(flushCycles)/float64(cycles)*100,
+						stallPct,
+						memErrors,
+					)
+					return commandCompleteMsg{success: true, message: msg, cmd: cmd}
+				}
+			}
+
+			return commandCompleteMsg{
+				success: false,
+				message: "Failed to read state dump (expected 34 bytes)",
+				cmd:     cmd,
+			}
+		}
+```
+
+- [ ] **Step 3: Build and verify it compiles**
 
 ```bash
-cd tools && go build ./debugger
+cd /home/emma/gpu/tools && go build ./debugger
 ```
 
 Expected: no errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add tools/debugger/opcodes.go tools/debugger/commands.go tools/debugger/stats.go tools/debugger/ui.go tools/debugger/serial.go
-git commit -m "feat: implement CmdStatsDump in Go debugger"
+git add tools/debugger/ui.go tools/debugger/serial.go
+git commit -m "feat: update DUMP_STATE Go handler to parse and display perf counters"
 ```
 
 ---
 
-## Task 6: Final verification
+## Task 5: Final verification
 
 - [ ] **Step 1: Run full test suite**
 
 ```bash
-cd tests && source test_env/bin/activate && make TEST_TYPE=all
+cd /home/emma/gpu/tests && source test_env/bin/activate && make TEST_TYPE=all
 ```
 
-Expected: all tests pass.
+Expected: all pass.
 
 - [ ] **Step 2: Build debugger**
 
 ```bash
-cd tools && go build ./debugger
+cd /home/emma/gpu/tools && go build ./debugger
 ```
 
 Expected: clean build.
@@ -624,14 +460,7 @@ Expected: clean build.
 - [ ] **Step 3: Smoke test with mock port**
 
 ```bash
-cd tools && go run ./debugger
+cd /home/emma/gpu/tools && go run ./debugger
 ```
 
-Select `[Mock Port - Testing Only]`, navigate to `Read Stats`, press Enter. Expected: stats table displayed in the status area with CPI ~2.00 (1000000 cycles / 500000 instructions).
-
-- [ ] **Step 4: Final commit if anything was tidied**
-
-```bash
-git add -p
-git commit -m "chore: finalize perf counters implementation"
-```
+Select `[Mock Port - Testing Only]`, connect, navigate to `Dump State`, press Enter. Expected: 34-byte response parsed, CPI ~2.00 displayed (1,000,000 cycles / 500,000 instructions).
