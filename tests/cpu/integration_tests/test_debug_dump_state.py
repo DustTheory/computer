@@ -1,4 +1,5 @@
 import cocotb
+import struct
 from cpu.utils import uart_send_byte, uart_wait_for_byte
 from cpu.constants import DEBUG_OP_HALT, DEBUG_OP_DUMP_STATE
 from cocotb.clock import Clock
@@ -83,3 +84,31 @@ async def test_dump_state_command(dut):
     # Verify individual fields from byte1
     assert ((byte1 >> 6) & 0x3) == instr_mem_axi_state, "instr_mem_axi_state mismatch"
     assert ((byte1 >> 5) & 0x1) == init_calib_complete, "init_calib_complete mismatch"
+
+    # Read 56 perf counter bytes (7 x 64-bit little-endian)
+    perf_bytes = []
+    for _ in range(56):
+        b = await uart_wait_for_byte(
+            dut.i_Clock,
+            dut.cpu.o_Uart_Rx_Out,
+            dut.cpu.debug_peripheral.uart_transmitter.o_Tx_Done
+        )
+        perf_bytes.append(b)
+
+    cycles               = struct.unpack_from('<Q', bytes(perf_bytes[0:8]))[0]
+    instructions_retired = struct.unpack_from('<Q', bytes(perf_bytes[8:16]))[0]
+    stall_cycles_load    = struct.unpack_from('<Q', bytes(perf_bytes[16:24]))[0]
+    stall_cycles_store   = struct.unpack_from('<Q', bytes(perf_bytes[24:32]))[0]
+    stall_cycles_fetch   = struct.unpack_from('<Q', bytes(perf_bytes[32:40]))[0]
+    flush_cycles         = struct.unpack_from('<Q', bytes(perf_bytes[40:48]))[0]
+    mem_errors           = struct.unpack_from('<Q', bytes(perf_bytes[48:56]))[0]
+
+    # i_Init_Calib_Complete = 1 in harness so cycles must be > 0
+    assert cycles > 0, f"cycles should be > 0, got {cycles}"
+    # No bad AXI responses in test harness
+    assert mem_errors == 0, f"mem_errors should be 0, got {mem_errors}"
+    # Stall counters must not exceed total cycles
+    assert stall_cycles_load  <= cycles, f"stall_cycles_load {stall_cycles_load} > cycles {cycles}"
+    assert stall_cycles_store <= cycles, f"stall_cycles_store {stall_cycles_store} > cycles {cycles}"
+    assert stall_cycles_fetch <= cycles, f"stall_cycles_fetch {stall_cycles_fetch} > cycles {cycles}"
+    assert flush_cycles       <= cycles, f"flush_cycles {flush_cycles} > cycles {cycles}"
