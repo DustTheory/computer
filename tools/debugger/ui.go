@@ -119,7 +119,7 @@ func initialModel(serialMgr *SerialManager) model {
 	cmdList := []Command{
 		CmdHalt, CmdUnhalt, CmdReset, CmdUnreset,
 		CmdPing, CmdReadPC, CmdReadRegister, CmdSetRegister,
-		CmdJumpToAddress, CmdReadMemory, CmdWriteMemory,
+		CmdJumpToAddress, CmdDumpState, CmdReadMemory, CmdWriteMemory,
 		CmdFullDump, CmdStatsDump, CmdLoadProgram,
 	}
 
@@ -452,6 +452,47 @@ func (m model) executeCommand(cmd Command) tea.Cmd {
 			return commandCompleteMsg{
 				success: false,
 				message: "Failed to read PC value",
+				cmd:     cmd,
+			}
+		}
+
+		// For DUMP_STATE, wait for 2-byte response and parse pipeline/memory fields
+		if cmd == CmdDumpState {
+			time.Sleep(300 * time.Millisecond)
+
+			responses := m.serialMgr.GetResponses()
+			if len(responses) > 0 {
+				lastResp := responses[len(responses)-1]
+				if len(lastResp.Data) >= 2 {
+					b0 := lastResp.Data[0]
+					b1 := lastResp.Data[1]
+					dataMemStateNames := []string{
+						"IDLE", "READ_SUBMITTING", "READ_AWAITING", "READ_SUCCESS",
+						"WRITE_SUBMITTING", "WRITE_AWAITING", "WRITE_SUCCESS", "MEMORY_ERROR",
+					}
+					instrMemStateNames := []string{
+						"IDLE", "READ_SUBMITTING", "READ_AWAITING", "READ_SUCCESS",
+					}
+					dataMemState := (b0 >> 5) & 0x7
+					pipelineFlushed := (b0 >> 4) & 0x1
+					stallS1 := (b0 >> 3) & 0x1
+					enableFetch := (b0 >> 2) & 0x1
+					s2Valid := (b0 >> 1) & 0x1
+					s3Valid := b0 & 0x1
+					instrMemState := (b1 >> 6) & 0x3
+					initCalibComplete := (b1 >> 5) & 0x1
+					msg := fmt.Sprintf(
+						"✓ State dump:\n  data_mem_axi:      %s\n  instr_mem_axi:     %s\n  init_calib:        %d\n  pipeline_flushed:  %d\n  stall_s1:          %d\n  enable_fetch:      %d\n  s2_valid:          %d\n  s3_valid:          %d",
+						dataMemStateNames[dataMemState], instrMemStateNames[instrMemState],
+						initCalibComplete, pipelineFlushed, stallS1, enableFetch, s2Valid, s3Valid,
+					)
+					return commandCompleteMsg{success: true, message: msg, cmd: cmd}
+				}
+			}
+
+			return commandCompleteMsg{
+				success: false,
+				message: "Failed to read state dump",
 				cmd:     cmd,
 			}
 		}

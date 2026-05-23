@@ -11,6 +11,13 @@ module debug_peripheral (
 
     input [31:0] i_PC,
     input i_Pipeline_Flushed,
+    input [2:0] i_Mem_AXI_State,
+    input i_Stall_S1,
+    input i_Enable_Instruction_Fetch,
+    input i_S2_Valid,
+    input i_S3_Valid,
+    input [1:0] i_Instr_Mem_AXI_State,
+    input i_Init_Calib_Complete,
 
     output reg o_Halt_Cpu,
     output reg o_Reset_Cpu,
@@ -216,6 +223,32 @@ module debug_peripheral (
                 o_Reg_Write_Enable <= 0;
                 r_State <= s_IDLE;
               end
+            end
+            op_DUMP_STATE: begin
+              case (r_Exec_Counter)
+                0: begin
+                  output_buffer[output_buffer_head] <= {
+                    i_Mem_AXI_State,
+                    i_Pipeline_Flushed,
+                    i_Stall_S1,
+                    i_Enable_Instruction_Fetch,
+                    i_S2_Valid,
+                    i_S3_Valid
+                  };
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                1: begin
+                  output_buffer[output_buffer_head] <= {
+                    i_Instr_Mem_AXI_State,
+                    i_Init_Calib_Complete,
+                    5'b0
+                  };
+                  output_buffer_head <= output_buffer_head + 1;
+                end
+                default: begin
+                  r_State <= s_IDLE;
+                end
+              endcase
             end
             default: begin
               r_State <= s_IDLE;

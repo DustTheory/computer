@@ -14,6 +14,7 @@ const (
 	op_WRITE_PC       OpCode = 0x7
 	op_READ_REGISTER  OpCode = 0x8
 	op_WRITE_REGISTER OpCode = 0x9
+	op_DUMP_STATE     OpCode = 0xA
 )
 
 // String returns the human-readable name of the opcode
@@ -39,6 +40,8 @@ func (o OpCode) String() string {
 		return "READ_REGISTER"
 	case op_WRITE_REGISTER:
 		return "WRITE_REGISTER"
+	case op_DUMP_STATE:
+		return "DUMP_STATE"
 	default:
 		return "UNKNOWN"
 	}

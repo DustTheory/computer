@@ -1,50 +1,61 @@
 # GPU FPGA Project
 
-Minimal computer on Arty S7-50: RV32I CPU + VGA + UART debug.
+**Last updated**: 2026-05-23
 
-## Commands
+Minimal computer on Arty S7-50 FPGA: RISC-V RV32I soft core + VGA video + UART debug.
+
+## Current Status
+
+- **CPU**: RV32I (no M/F/D extensions), unit + integration tests passing
+- **Memory**: DDR3 operational @ 81.25 MHz (MIG initialized 2026-01-04)
+- **Video**: VGA working — DDR3-backed framebuffer via VDMA
+- **Debug**: UART debug peripheral working (`tools/debugger`, `tools/probe.py`)
+- **Blocker**: None
+
+## Quick Start
 
 ```bash
-# Run tests (must activate venv first)
+# Run tests
 cd tests && source test_env/bin/activate && make
 
-# Test types: unit, integration, vga, all
-make TEST_TYPE=unit
-make TEST_TYPE=integration
-make TEST_TYPE=vga
-make TEST_TYPE=all
+# Debug via UART
+go run tools/debugger/main.go
 
-# Single test file
-make TEST_TYPE=integration TEST_FILE=test_add_instruction
-
-# Debug tool
-cd tools && go run ./debugger
+# Build (future - not yet set up)
+# cd tools/compiler && make
 ```
 
-## Memory Map
+## Key Directories
 
-```
-0x80000000 - 0x80000FFF: Boot ROM (4KB BRAM)
-0x80001000 - 0x87F1DFFF: RAM (~127MB DDR3)
-0x87F1E000 - 0x87F8EFFF: Framebuffer 0 (640x480x12bpp)
-0x87F8F000 - 0x87FFFFFF: Framebuffer 1 (640x480x12bpp)
-```
+- `hdl/` - Verilog sources (cpu/, debug_peripheral/, vga_out/)
+- `tests/` - Verilator + cocotb tests (unit_tests/, integration_tests/)
+- `tools/` - debugger/ (Go UART CLI), probe.py (Python monitor)
+- `config/` - arty-s7-50.xdc (pin constraints), mig_b.prj (MIG config)
+- `ip_repo/` - Packaged CPU IP for Vivado block design
+- `docs/` - Architecture and getting started guides
 
-- PC starts at 0x80000000 on reset
-- ROM_BOUNDARY_ADDR = 0x80000FFF
-- Framebuffers are 4K-aligned for DMA
+## Documentation System
 
-## Constraints
+This project uses **path-scoped rules** in `.claude/rules/` that auto-load when you work with matching files:
 
-- CPU runs at 81.25 MHz (MIG ui_clk)
-- UART: 115200 baud, 706 clocks/bit
-- 3-stage pipeline, no hazard detection - insert NOPs between dependent instructions
-- DDR3 requires 200 MHz ref_clk, Bank 34 only (1.35V)
+- **Always loaded**: `.claude/rules/process.md` (documentation workflow)
+- **When editing CPU**: `.claude/rules/architecture/cpu.md`
+- **When editing memory**: `.claude/rules/architecture/memory.md`
+- **When editing tests**: `.claude/rules/testing/tests.md`
+- **When editing debug**: `.claude/rules/debug/debug.md`
+- **When editing constraints**: `.claude/rules/architecture/mig-vivado.md`
 
-## Gotchas
+You don't need to manually read docs - the relevant rules load automatically based on which files you're working with.
 
-- Tests fail with import errors if venv not activated
-- CPU reset must use MIG's `ui_clk_sync_rst`, NOT `peripheral_reset`
-- No alignment checks - misaligned loads/stores behave unexpectedly
-- Constants in `.vh` files must stay in sync with `tests/cpu/constants.py`
-- Vivado project not in repo - recreate from `config/arty-s7-50.xdc`
+## Critical Constraints
+
+- **DDR3**: Requires 200 MHz ref_clk, Bank 34 only (voltage isolation)
+- **UART**: 115200 baud @ 81.25 MHz ≈ 706 clocks/bit
+- **Memory map**: CPU base 0x80000000, ROM 0x80000000-0x80000FFF, RAM 0x80001000+, FB at end
+- **Pipeline**: 3-stage, no hazard detection (insert NOPs manually)
+
+## Next Steps
+
+1. Draw something more interesting than a solid color (shapes, sprites, text)
+2. Add game controller peripheral
+3. Network peripheral (TBD)

@@ -107,6 +107,7 @@ ifeq ($(TEST_TYPE),vga)
   VERILOG_SOURCES += ./vga/unit_tests/vga_unit_tests_harness.v
 endif
 
+
 export SIM TOPLEVEL_LANG VERILOG_SOURCES TOPLEVEL MODULE EXTRA_ARGS PYTHONPATH
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
