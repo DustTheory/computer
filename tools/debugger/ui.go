@@ -456,16 +456,18 @@ func (m model) executeCommand(cmd Command) tea.Cmd {
 			}
 		}
 
-		// For DUMP_STATE, wait for 2-byte response and parse pipeline/memory fields
+		// For DUMP_STATE, wait for 58-byte response (2 state bytes + 56 perf counter bytes)
 		if cmd == CmdDumpState {
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(600 * time.Millisecond)
 
 			responses := m.serialMgr.GetResponses()
 			if len(responses) > 0 {
 				lastResp := responses[len(responses)-1]
-				if len(lastResp.Data) >= 2 {
+				if len(lastResp.Data) >= 58 {
 					b0 := lastResp.Data[0]
 					b1 := lastResp.Data[1]
+					p := lastResp.Data[2:58]
+
 					dataMemStateNames := []string{
 						"IDLE", "READ_SUBMITTING", "READ_AWAITING", "READ_SUCCESS",
 						"WRITE_SUBMITTING", "WRITE_AWAITING", "WRITE_SUCCESS", "MEMORY_ERROR",
@@ -481,10 +483,63 @@ func (m model) executeCommand(cmd Command) tea.Cmd {
 					s3Valid := b0 & 0x1
 					instrMemState := (b1 >> 6) & 0x3
 					initCalibComplete := (b1 >> 5) & 0x1
+
+					u64 := func(off int) uint64 {
+						var v uint64
+						for i := 0; i < 8; i++ {
+							v |= uint64(p[off+i]) << (i * 8)
+						}
+						return v
+					}
+					cycles := u64(0)
+					retired := u64(8)
+					stallLoad := u64(16)
+					stallStore := u64(24)
+					stallFetch := u64(32)
+					flushCycles := u64(40)
+					memErrors := u64(48)
+
+					var cpi float64
+					if retired > 0 {
+						cpi = float64(cycles) / float64(retired)
+					}
+					totalStall := stallLoad + stallStore + stallFetch + flushCycles
+					var stallPct float64
+					if cycles > 0 {
+						stallPct = float64(totalStall) / float64(cycles) * 100
+					}
+					pct := func(v uint64) float64 {
+						if cycles == 0 {
+							return 0
+						}
+						return float64(v) / float64(cycles) * 100
+					}
+
 					msg := fmt.Sprintf(
-						"✓ State dump:\n  data_mem_axi:      %s\n  instr_mem_axi:     %s\n  init_calib:        %d\n  pipeline_flushed:  %d\n  stall_s1:          %d\n  enable_fetch:      %d\n  s2_valid:          %d\n  s3_valid:          %d",
+						"✓ State dump:\n"+
+							"  data_mem_axi:      %s\n"+
+							"  instr_mem_axi:     %s\n"+
+							"  init_calib:        %d\n"+
+							"  pipeline_flushed:  %d\n"+
+							"  stall_s1:          %d\n"+
+							"  enable_fetch:      %d\n"+
+							"  s2_valid:          %d\n"+
+							"  s3_valid:          %d\n"+
+							"─────────────────────────────────\n"+
+							"  cycles:            %d\n"+
+							"  instructions:      %d\n"+
+							"  CPI:               %.2f\n"+
+							"  stall%% (load):     %.1f%%\n"+
+							"  stall%% (store):    %.1f%%\n"+
+							"  stall%% (fetch):    %.1f%%\n"+
+							"  flush%%:            %.1f%%\n"+
+							"  total stall%%:      %.1f%%\n"+
+							"  mem_errors:        %d",
 						dataMemStateNames[dataMemState], instrMemStateNames[instrMemState],
 						initCalibComplete, pipelineFlushed, stallS1, enableFetch, s2Valid, s3Valid,
+						cycles, retired, cpi,
+						pct(stallLoad), pct(stallStore), pct(stallFetch), pct(flushCycles),
+						stallPct, memErrors,
 					)
 					return commandCompleteMsg{success: true, message: msg, cmd: cmd}
 				}
@@ -492,7 +547,7 @@ func (m model) executeCommand(cmd Command) tea.Cmd {
 
 			return commandCompleteMsg{
 				success: false,
-				message: "Failed to read state dump",
+				message: "Failed to read state dump (expected 58 bytes)",
 				cmd:     cmd,
 			}
 		}

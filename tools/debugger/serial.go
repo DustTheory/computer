@@ -212,7 +212,26 @@ func (sm *SerialManager) SendCommand(opcode OpCode) error {
 	if sm.isMock {
 		// Simulate mock response
 		time.AfterFunc(50*time.Millisecond, func() {
-			mockData := []byte{byte(opcode), 0xAA, 0x55}
+			var mockData []byte
+			if opcode == op_DUMP_STATE {
+				mockData = make([]byte, 58)
+				// byte0: data mem IDLE (bits 7:5 = 0), all pipeline flags clear
+				mockData[0] = 0x00
+				// byte1: instr mem IDLE (bits 7:6 = 0), init_calib_complete=1 (bit 5)
+				mockData[1] = 0x20
+				// perf counters bytes 2-57: cycles=1000000, instructions=500000, rest 0
+				cycles := uint64(1000000)
+				for i := 0; i < 8; i++ {
+					mockData[2+i] = byte(cycles >> (i * 8))
+				}
+				retired := uint64(500000)
+				for i := 0; i < 8; i++ {
+					mockData[10+i] = byte(retired >> (i * 8))
+				}
+				// stall_load, stall_store, stall_fetch, flush_cycles, mem_errors stay 0
+			} else {
+				mockData = []byte{byte(opcode), 0xAA, 0x55}
+			}
 			sm.handleResponse(mockData)
 		})
 		return nil
