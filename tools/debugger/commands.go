@@ -18,6 +18,7 @@ const (
 	CmdStatsDump
 	CmdReadMemory
 	CmdWriteMemory
+	CmdDumpState
 )
 
 // CommandInfo holds display information about a command
@@ -42,6 +43,7 @@ var commands = map[Command]CommandInfo{
 	CmdStatsDump:     {"Read Stats", "Read CPU statistics", false},
 	CmdReadMemory:    {"Read Memory", "Read memory at address", false},
 	CmdWriteMemory:   {"Write Memory", "Write to memory address", false},
+	CmdDumpState:     {"Dump State", "Read CPU pipeline and memory AXI state", true},
 }
 
 // GetOpCode returns the opcode for a command
@@ -65,6 +67,8 @@ func (c Command) GetOpCode() (OpCode, bool) {
 		return op_WRITE_REGISTER, true
 	case CmdJumpToAddress:
 		return op_WRITE_PC, true
+	case CmdDumpState:
+		return op_DUMP_STATE, true
 	default:
 		return 0, false
 	}

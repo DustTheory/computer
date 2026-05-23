@@ -118,7 +118,11 @@ module memory_axi (
         end
         WRITE_SUBMITTING: begin
           if (s_axil_awready && s_axil_wready) begin
-            r_State <= s_axil_bvalid ? WRITE_SUCCESS : WRITE_AWAITING;
+            if (s_axil_bvalid) begin
+              r_State <= WRITE_SUCCESS;
+            end else begin
+              r_State <= WRITE_AWAITING;
+            end
           end
         end
         WRITE_AWAITING: begin
@@ -128,6 +132,9 @@ module memory_axi (
         end
         WRITE_SUCCESS: begin
           r_State <= IDLE;
+        end
+        MEMORY_ERROR: begin
+          // Get stuck for now
         end
         default: begin
           r_State <= IDLE;
@@ -177,7 +184,7 @@ module memory_axi (
   assign s_axil_wvalid = r_State == WRITE_SUBMITTING;
   assign s_axil_wdata = r_State == WRITE_SUBMITTING ? w_Prepared_WData : 0;
   assign s_axil_wstrb = r_State == WRITE_SUBMITTING ? w_Prepared_WStrb : 0;
-  assign s_axil_bready = r_State == WRITE_SUBMITTING;
+  assign s_axil_bready = r_State == WRITE_SUBMITTING || r_State == WRITE_AWAITING;
 
   assign o_State = r_State;
 

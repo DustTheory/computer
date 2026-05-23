@@ -199,6 +199,7 @@ module cpu (
       .i_Instruction_Addr(r_PC),
       .o_Instruction(w_Instruction),
       .o_Instruction_Valid(w_Instruction_Valid),
+      .o_State(w_Instruction_Memory_State),
       .s_axil_araddr(s_instruction_memory_axil_araddr),
       .s_axil_arvalid(s_instruction_memory_axil_arvalid),
       .s_axil_arready(s_instruction_memory_axil_arready),
@@ -221,6 +222,7 @@ module cpu (
   /*----------------PIPELINE STAGE 2----------------*/
 
   wire [MEMORY_STATE_WIDTH:0] w_Memory_State;
+  wire [1:0] w_Instruction_Memory_State;
 
   function reg f_Is_Load(input [LS_SEL_WIDTH:0] v);
     begin
@@ -380,6 +382,13 @@ module cpu (
 
       .i_PC(r_PC),
       .i_Pipeline_Flushed(w_Pipeline_Flushed),
+      .i_Mem_AXI_State(w_Memory_State),
+      .i_Stall_S1(w_Stall_S1),
+      .i_Enable_Instruction_Fetch(w_Enable_Instruction_Fetch),
+      .i_S2_Valid(r_S2_Valid),
+      .i_S3_Valid(r_S3_Valid),
+      .i_Instr_Mem_AXI_State(w_Instruction_Memory_State),
+      .i_Init_Calib_Complete(i_Init_Calib_Complete),
 
       .o_Uart_Rx_Out(o_Uart_Rx_Out),
       .o_Halt_Cpu(w_Debug_Stall),

@@ -8,6 +8,7 @@ module instruction_memory_axi (
     input [XLEN-1:0] i_Instruction_Addr,
     output reg [XLEN-1:0] o_Instruction,
     output o_Instruction_Valid,
+    output [1:0] o_State,
 
     // AXI INTERFACE
     output [31:0] s_axil_araddr,
@@ -76,6 +77,7 @@ module instruction_memory_axi (
   end
 
   assign o_Instruction_Valid = (r_State == READ_SUCCESS);
+  assign o_State = r_State;
   // assign o_Fetch_Busy = (r_State != IDLE);
 
   // Calculate offset from CPU base address for ROM indexing

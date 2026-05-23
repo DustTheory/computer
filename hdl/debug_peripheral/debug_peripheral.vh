@@ -15,6 +15,7 @@ localparam op_READ_PC = 8'h06;
 localparam op_WRITE_PC = 8'h07;
 localparam op_READ_REGISTER = 8'h08;
 localparam op_WRITE_REGISTER = 8'h09;
+localparam op_DUMP_STATE     = 8'h0A;
 
 localparam PING_RESPONSE_BYTE = 8'hAA;
 
