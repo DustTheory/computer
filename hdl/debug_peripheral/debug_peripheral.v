@@ -31,7 +31,9 @@ module debug_peripheral (
     input [31:0] i_Reg_Read_Data,
 
     output reg o_Write_PC_Enable,
-    output reg [31:0] o_Write_PC_Data
+    output reg [31:0] o_Write_PC_Data,
+
+    input [447:0] i_Perf_Counters
 
 );
 
@@ -93,6 +95,7 @@ module debug_peripheral (
   reg [ 1:0] r_State = s_IDLE;
   reg [ 7:0] r_Op_Code = 0;
   reg [31:0] r_Exec_Counter = 0;
+  reg [447:0] r_Perf_Snapshot;
 
   always @(posedge i_Clock, posedge i_Reset) begin
     if (i_Reset) begin
@@ -227,6 +230,7 @@ module debug_peripheral (
             op_DUMP_STATE: begin
               case (r_Exec_Counter)
                 0: begin
+                  r_Perf_Snapshot <= i_Perf_Counters;
                   output_buffer[output_buffer_head] <= {
                     i_Mem_AXI_State,
                     i_Pipeline_Flushed,
@@ -246,7 +250,12 @@ module debug_peripheral (
                   output_buffer_head <= output_buffer_head + 1;
                 end
                 default: begin
-                  r_State <= s_IDLE;
+                  if (r_Exec_Counter < 58) begin
+                    output_buffer[output_buffer_head] <= r_Perf_Snapshot[(r_Exec_Counter - 2) * 8 +: 8];
+                    output_buffer_head <= output_buffer_head + 1;
+                  end else begin
+                    r_State <= s_IDLE;
+                  end
                 end
               endcase
             end
