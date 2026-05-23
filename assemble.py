@@ -58,20 +58,24 @@ program = []
 program.append(encode_u_type(OP_LUI, t0, 0x87F1E))         # lui t0, 0x87F1E
 # 0x04
 program.append(encode_u_type(OP_LUI, t2, 0xF000F))         # lui t2, 0xF000F  (= 0xF000F000)
-# 0x08
-program.append(encode_u_type(OP_LUI, t1, 0x26))            # lui t1, 0x26000
+# 0x08  t1 = 19200 = 0x4B00 (153600 / 8 iterations unrolled)
+program.append(encode_u_type(OP_LUI, t1, 0x5))             # lui t1, 0x5000  (= 20480)
 # 0x0C
-program.append(encode_i_type(OP_ALU_I, t1, 0, t1, tc(-0x800, 12)))  # addi t1, t1, -2048  → 153600
+program.append(encode_i_type(OP_ALU_I, t1, 0, t1, tc(-1280, 12)))  # addi t1, t1, -1280  → 19200
 
-# fill_loop: offset 0x10
-# 0x10
+# fill_loop: offset 0x10  (8× unrolled: 8 stores, one addi, one branch)
 program.append(encode_s_type(OP_STORE, 2, t0, t2, 0))      # sw t2, 0(t0)
-# 0x14
-program.append(encode_i_type(OP_ALU_I, t0, 0, t0, 4))      # addi t0, t0, 4
-# 0x18
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 4))      # sw t2, 4(t0)
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 8))      # sw t2, 8(t0)
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 12))     # sw t2, 12(t0)
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 16))     # sw t2, 16(t0)
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 20))     # sw t2, 20(t0)
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 24))     # sw t2, 24(t0)
+program.append(encode_s_type(OP_STORE, 2, t0, t2, 28))     # sw t2, 28(t0)
+program.append(encode_i_type(OP_ALU_I, t0, 0, t0, 32))     # addi t0, t0, 32
 program.append(encode_i_type(OP_ALU_I, t1, 0, t1, tc(-1, 12)))  # addi t1, t1, -1
-# 0x1C  branch back to fill_loop (offset 0x10), delta = -12
-program.append(encode_b_type(OP_BRANCH, 1, t1, zero, tc(-12, 13)))  # bne t1, zero, -12
+# branch back to fill_loop, delta = -(10 instructions * 4 bytes) = -40
+program.append(encode_b_type(OP_BRANCH, 1, t1, zero, tc(-40, 13)))  # bne t1, zero, -40
 
 # ── Configure VDMA (correct offsets from PG020 / component.xml) ───────────────
 # Register map (base = 0x88000000):
