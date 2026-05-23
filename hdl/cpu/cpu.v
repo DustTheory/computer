@@ -361,6 +361,50 @@ module cpu (
   wire w_Retire_Reg = w_Wb_Enable;
   wire w_Retire = w_Retire_Reg || w_Store_Commit;
 
+  // Performance counters
+  reg [63:0] r_Perf_Cycles;
+  reg [63:0] r_Perf_Instructions_Retired;
+  reg [63:0] r_Perf_Stall_Load;
+  reg [63:0] r_Perf_Stall_Store;
+  reg [63:0] r_Perf_Stall_Fetch;
+  reg [63:0] r_Perf_Flush_Cycles;
+  reg [63:0] r_Perf_Mem_Errors;
+
+  always @(posedge i_Clock) begin
+    if (w_Reset) begin
+      r_Perf_Cycles               <= 64'd0;
+      r_Perf_Instructions_Retired <= 64'd0;
+      r_Perf_Stall_Load           <= 64'd0;
+      r_Perf_Stall_Store          <= 64'd0;
+      r_Perf_Stall_Fetch          <= 64'd0;
+      r_Perf_Flush_Cycles         <= 64'd0;
+      r_Perf_Mem_Errors           <= 64'd0;
+    end else if (i_Init_Calib_Complete) begin
+      r_Perf_Cycles <= r_Perf_Cycles + 1;
+      if (w_Retire)
+        r_Perf_Instructions_Retired <= r_Perf_Instructions_Retired + 1;
+      if (w_Stall_S1 && w_S2_Is_Load)
+        r_Perf_Stall_Load <= r_Perf_Stall_Load + 1;
+      if (w_Stall_S1 && w_S2_Is_Store)
+        r_Perf_Stall_Store <= r_Perf_Stall_Store + 1;
+      if (!w_Instruction_Valid && !r_Flushing_Pipeline && !w_Debug_Stall)
+        r_Perf_Stall_Fetch <= r_Perf_Stall_Fetch + 1;
+      if (r_Flushing_Pipeline)
+        r_Perf_Flush_Cycles <= r_Perf_Flush_Cycles + 1;
+      if (s_data_memory_axil_bvalid && s_data_memory_axil_bresp != 2'b00)
+        r_Perf_Mem_Errors <= r_Perf_Mem_Errors + 1;
+    end
+  end
+
+  wire [447:0] w_Perf_Counters;
+  assign w_Perf_Counters[63:0]    = r_Perf_Cycles;
+  assign w_Perf_Counters[127:64]  = r_Perf_Instructions_Retired;
+  assign w_Perf_Counters[191:128] = r_Perf_Stall_Load;
+  assign w_Perf_Counters[255:192] = r_Perf_Stall_Store;
+  assign w_Perf_Counters[319:256] = r_Perf_Stall_Fetch;
+  assign w_Perf_Counters[383:320] = r_Perf_Flush_Cycles;
+  assign w_Perf_Counters[447:384] = r_Perf_Mem_Errors;
+
   always @(posedge i_Clock) begin
     if (w_Reset) begin
       r_PC <= CPU_BASE_ADDR;
@@ -389,6 +433,7 @@ module cpu (
       .i_S3_Valid(r_S3_Valid),
       .i_Instr_Mem_AXI_State(w_Instruction_Memory_State),
       .i_Init_Calib_Complete(i_Init_Calib_Complete),
+      .i_Perf_Counters(w_Perf_Counters),
 
       .o_Uart_Rx_Out(o_Uart_Rx_Out),
       .o_Halt_Cpu(w_Debug_Stall),
